@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select , text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import RequireAdmin
@@ -127,6 +127,7 @@ async def route_usage(
     return {"labels": [r[0] for r in rows], "data": [r[1] for r in rows]}
 
 
+
 @router.get("/admin/dashboard/telemetry-volume")
 async def telemetry_volume(
     current_user: RequireAdmin,
@@ -134,18 +135,24 @@ async def telemetry_volume(
 ):
     """Telemetry count per hour (last 24h)."""
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    
+    # We define the expression once to ensure consistency
+    # We use text("'hour'") to force it as a literal string, not a parameter
+    hour_col = func.date_trunc(text("'hour'"), RawTelemetry.timestamp).label("hour_bucket")
+
     result = await db.execute(
         select(
-            func.date_trunc("hour", RawTelemetry.timestamp).label("hour"),
+            hour_col,
             func.count(RawTelemetry.id),
         )
         .where(RawTelemetry.timestamp >= cutoff)
-        .group_by(func.date_trunc("hour", RawTelemetry.timestamp))
-        .order_by(func.date_trunc("hour", RawTelemetry.timestamp))
+        .group_by(text("hour_bucket"))  # Group by the label we just created
+        .order_by(text("hour_bucket"))
     )
+    
     rows = result.all()
+    # Note: Use r.hour_bucket or r[0] to access the data
     return {"labels": [str(r[0]) for r in rows], "data": [r[1] for r in rows]}
-
 
 @router.get("/admin/ml/status")
 async def ml_status(current_user: RequireAdmin):
