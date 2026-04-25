@@ -25,11 +25,20 @@ async def point_to_point_search(
     if not start or not end:
         raise HTTPException(404, "Stop not found")
     routes = await crud_route.get_routes_through_stops(db, body.start_stop_id, body.end_stop_id)
-    redis = await get_redis()
+    redis = None
+    try:
+        redis = await get_redis()
+    except Exception:
+        redis = None
     results = []
     for route in routes:
         key = f"route:{route.route_number}:stop:{body.start_stop_id}"
-        data = await redis.hgetall(key)
+        data = {}
+        if redis is not None:
+            try:
+                data = await redis.hgetall(key)
+            except Exception:
+                data = {}
         if data:
             results.append({"route_number": route.route_number, "etas": data})
         else:
