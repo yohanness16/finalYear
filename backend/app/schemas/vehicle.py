@@ -51,6 +51,7 @@ class VehiclePosition(BaseModel):
     speed: float = 0.0
     timestamp: float  # Unix seconds (last position update)
     route_id: Optional[int] = None
+    assignment_id: Optional[int] = None
 
 
 class LivePositionsEnvelope(BaseModel):
