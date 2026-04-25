@@ -12,8 +12,10 @@ from app.db.session import get_db
 from app.schemas.tracking import TelemetryInput
 from app.utils.gps_validation import get_average_coord, is_valid_coord
 from app.services.route_validation import find_nearest_stop, is_on_route
+from app.services.route_eta import estimate_route_stop_eta_payloads
 from app.services.cv_engine import estimate_density
 from app.services.redis_cache import get_route_stops, get_last_coords, set_bus_live_pipeline
+from app.utils.redis_client import set_route_stop_etas
 
 router = APIRouter()
 
@@ -87,6 +89,17 @@ async def receive_telemetry(
         occupancy,
         assignment.id if assignment else 0,
     )
+
+    if vehicle.route and route_stops:
+        stop_payloads = estimate_route_stop_eta_payloads(
+            data.lat,
+            data.lon,
+            data.speed or 0.0,
+            occupancy,
+            vehicle.route.route_number,
+            route_stops,
+        )
+        await set_route_stop_etas(vehicle.route.route_number, stop_payloads)
 
     await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0.0)
 
