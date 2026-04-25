@@ -1,9 +1,13 @@
 """Tracking and telemetry CRUD operations."""
 
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.assignment import Assignment
 from app.models.raw_telemetry import RawTelemetry
+from app.models.stop import Stop
 from app.models.trip_history import TripHistory
 
 
@@ -51,3 +55,46 @@ async def create_trip_history(
     await db.flush()
     await db.refresh(entry)
     return entry
+
+
+async def create_trip_history_from_assignment(
+    db: AsyncSession,
+    assignment: Assignment,
+    stop: Stop,
+    lat: float,
+    lon: float,
+    occupancy_level: int | None = None,
+) -> TripHistory:
+    """Create a trip-history sample for ML training from live telemetry."""
+    from app.services.eta_calc import calculate_eta_heuristic
+
+    now = datetime.now(timezone.utc)
+    start_time = assignment.start_time
+    if start_time is None:
+        actual_travel_time = 0
+    else:
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        actual_travel_time = max(1, int((now - start_time).total_seconds()))
+
+    heuristic_eta = int(
+        calculate_eta_heuristic(
+            lat,
+            lon,
+            stop.lat,
+            stop.lon,
+            num_stops=0,
+            base_dwell_time=stop.base_dwell_time or 30,
+            peak_multiplier=stop.peak_multiplier,
+            occupancy_level=occupancy_level or 0,
+        )
+    )
+
+    return await create_trip_history(
+        db,
+        assignment_id=assignment.id,
+        stop_id=stop.id,
+        occupancy_level=occupancy_level,
+        heuristic_eta=heuristic_eta,
+        actual_travel_time=actual_travel_time,
+    )
