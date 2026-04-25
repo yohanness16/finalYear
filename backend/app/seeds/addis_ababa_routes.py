@@ -53,18 +53,16 @@ async def seed_addis_ababa_routes(db: AsyncSession) -> None:
                 select(Route).where(Route.route_number == item["route_number"])
             )
         ).scalar_one_or_none()
-        if route:
-            continue
-
-        route = Route(
-            route_number=item["route_number"],
-            name=item["name"],
-            origin=item["origin"],
-            destination=item["destination"],
-            active=True,
-        )
-        db.add(route)
-        await db.flush()
+        if not route:
+            route = Route(
+                route_number=item["route_number"],
+                name=item["name"],
+                origin=item["origin"],
+                destination=item["destination"],
+                active=True,
+            )
+            db.add(route)
+            await db.flush()
 
         for stop_data in item["stops"]:
             stop = (
@@ -84,11 +82,23 @@ async def seed_addis_ababa_routes(db: AsyncSession) -> None:
                 db.add(stop)
                 await db.flush()
 
-            route_stop = RouteStop(
-                route_id=route.id,
-                stop_id=stop.id,
-                sequence_order=stop_data["sequence"],
-            )
-            db.add(route_stop)
+            existing_route_stop = (
+                await db.execute(
+                    select(RouteStop).where(
+                        RouteStop.route_id == route.id,
+                        RouteStop.stop_id == stop.id,
+                    )
+                )
+            ).scalar_one_or_none()
+
+            if existing_route_stop:
+                existing_route_stop.sequence_order = stop_data["sequence"]
+            else:
+                route_stop = RouteStop(
+                    route_id=route.id,
+                    stop_id=stop.id,
+                    sequence_order=stop_data["sequence"],
+                )
+                db.add(route_stop)
 
     await db.commit()
