@@ -46,6 +46,21 @@ def route_stop_key(route_no: str, stop_id: int) -> str:
     return f"route:{route_no}:stop:{stop_id}"
 
 
+async def set_route_stop_etas(route_number: str, payloads: dict[int, dict[str, Any]], ttl: int = 300) -> None:
+    """Store the latest ETA snapshot for each stop on a route."""
+    if not payloads:
+        return
+    client = await get_redis()
+    pipe = client.pipeline()
+    for stop_id, payload in payloads.items():
+        pipe.hset(
+            route_stop_key(route_number, stop_id),
+            mapping={k: str(v) for k, v in payload.items()},
+        )
+        pipe.expire(route_stop_key(route_number, stop_id), ttl)
+    await pipe.execute()
+
+
 async def set_bus_live(
     plate_number: str,
     lat: float,
