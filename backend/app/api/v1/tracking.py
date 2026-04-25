@@ -11,7 +11,7 @@ from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
 from app.schemas.tracking import TelemetryInput
 from app.utils.gps_validation import get_average_coord, is_valid_coord
-from app.services.route_validation import is_on_route
+from app.services.route_validation import find_nearest_stop, is_on_route
 from app.services.cv_engine import estimate_density
 from app.services.redis_cache import get_route_stops, get_last_coords, set_bus_live_pipeline
 
@@ -89,6 +89,21 @@ async def receive_telemetry(
     )
 
     await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0.0)
+
+    if assignment and route_stops:
+        nearest_stop = find_nearest_stop(data.lat, data.lon, route_stops)
+        if nearest_stop is not None:
+            try:
+                await crud_tracking.create_trip_history_from_assignment(
+                    db,
+                    assignment,
+                    nearest_stop,
+                    data.lat,
+                    data.lon,
+                    occupancy_level=occupancy,
+                )
+            except Exception:
+                pass
 
     from datetime import datetime, timezone
 
