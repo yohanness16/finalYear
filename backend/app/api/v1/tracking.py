@@ -60,7 +60,10 @@ async def receive_telemetry(
                 "route_id": vehicle.route_id,
             }
 
-    last_coords = await get_last_coords(vehicle.plate_number)
+    try:
+        last_coords = await get_last_coords(vehicle.plate_number)
+    except Exception:
+        last_coords = []
     if not is_valid_coord(data.lat, data.lon, last_coords):
         avg = get_average_coord(last_coords)
         if avg:
@@ -82,13 +85,16 @@ async def receive_telemetry(
         data.raw_payload,
     )
 
-    await set_bus_live_pipeline(
-        vehicle.plate_number,
-        data.lat,
-        data.lon,
-        occupancy,
-        assignment.id if assignment else 0,
-    )
+    try:
+        await set_bus_live_pipeline(
+            vehicle.plate_number,
+            data.lat,
+            data.lon,
+            occupancy,
+            assignment.id if assignment else 0,
+        )
+    except Exception:
+        pass
 
     if vehicle.route and route_stops:
         stop_payloads = estimate_route_stop_eta_payloads(
@@ -99,7 +105,10 @@ async def receive_telemetry(
             vehicle.route.route_number,
             route_stops,
         )
-        await set_route_stop_etas(vehicle.route.route_number, stop_payloads)
+        try:
+            await set_route_stop_etas(vehicle.route.route_number, stop_payloads)
+        except Exception:
+            pass
 
     await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0.0)
 
