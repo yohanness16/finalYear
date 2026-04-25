@@ -16,6 +16,7 @@ from app.api.v1 import (
     users,
     vehicles,
     routes,
+    assignments,
     admin,
     websocket,
     search,
@@ -23,6 +24,7 @@ from app.api.v1 import (
     notifications,
 )
 from app.utils.redis_client import close_redis
+from app.services.redis_cache import close_redis_cache
 from app.middleware.security_headers import SecurityHeadersMiddleware
 
 
@@ -31,6 +33,7 @@ async def lifespan(app: FastAPI):
     """Manage startup and shutdown."""
     yield
     await close_redis()
+    await close_redis_cache()
 
 
 app = FastAPI(
@@ -58,6 +61,7 @@ app.include_router(tracking.router, prefix="/api/v1", tags=["tracking"])
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(vehicles.router, prefix="/api/v1", tags=["vehicles"])
 app.include_router(routes.router, prefix="/api/v1", tags=["routes"])
+app.include_router(assignments.router, prefix="/api/v1", tags=["assignments"])
 app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
 app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
 app.include_router(search.router, prefix="/api/v1", tags=["search"])

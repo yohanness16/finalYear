@@ -8,6 +8,15 @@ from app.models.route import Route, RouteStop
 from app.models.stop import Stop
 
 
+async def get_route_stops_ordered(db: AsyncSession, route_id: int) -> list[Stop]:
+    """Stops on a route in sequence order (for GPS validation)."""
+    route = await get_route_by_id(db, route_id)
+    if not route or not route.route_stops:
+        return []
+    ordered = sorted(route.route_stops, key=lambda rs: rs.sequence_order)
+    return [rs.stop for rs in ordered if rs.stop is not None]
+
+
 async def get_route_by_id(db: AsyncSession, route_id: int) -> Route | None:
     result = await db.execute(
         select(Route).where(Route.id == route_id).options(selectinload(Route.route_stops).selectinload(RouteStop.stop))

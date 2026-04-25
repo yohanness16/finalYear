@@ -43,7 +43,9 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     if not pwd_context.verify(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(user.id)
-    return TokenResponse(access_token=token)
+    
+    # You MUST return both fields for the Bearer handshake to work
+    return TokenResponse(access_token=token, token_type="bearer")
 
 
 @router.post("/auth/google", response_model=TokenResponse)
@@ -88,11 +90,12 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
         is_verified=True,
     )
     token = create_access_token(user.id)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, token_type="bearer")
 
 
 @router.get("/auth/me", response_model=UserResponse)
-async def me(current_user=Depends(get_current_user)):
+@limiter.limit("30/minute")
+async def me(request: Request, current_user=Depends(get_current_user)):
     """Current user profile (requires JWT)."""
     return current_user
 

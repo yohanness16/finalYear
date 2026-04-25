@@ -11,6 +11,7 @@ class TelemetryInput(BaseModel):
     device_id: str
     lat: float
     lon: float
+    speed: Optional[float] = None
     pixel_count: Optional[int] = None
     raw_payload: Optional[dict[str, Any]] = None
 
