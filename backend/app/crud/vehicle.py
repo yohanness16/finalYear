@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.assignment import Assignment
 from app.models.vehicle import Vehicle
 
 
@@ -52,6 +53,13 @@ async def get_vehicle_with_positions(db: AsyncSession, vehicle_id: int) -> Vehic
 
 async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
     """Positions keyed by vehicle id (string) for JSON stability."""
+    active_assignment_id = (
+        select(Assignment.id)
+        .where(Assignment.vehicle_id == Vehicle.id, Assignment.status == "active")
+        .order_by(Assignment.start_time.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
     result = await db.execute(
         select(
             Vehicle.id,
@@ -61,12 +69,13 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
             Vehicle.speed,
             Vehicle.route_id,
             Vehicle.position_updated_at,
+            active_assignment_id.label("assignment_id"),
         )
     )
     rows = result.all()
     out: dict[str, dict] = {}
     now_ts = datetime.now(timezone.utc).timestamp()
-    for vid, plate, lat, lon, speed, route_id, pos_at in rows:
+    for vid, plate, lat, lon, speed, route_id, pos_at, assignment_id in rows:
         if lat is None or lon is None:
             continue
         ts = pos_at.timestamp() if pos_at else now_ts
@@ -78,11 +87,19 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
             "speed": speed or 0.0,
             "timestamp": ts,
             "route_id": route_id,
+            "assignment_id": assignment_id,
         }
     return out
 
 
 async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
+    active_assignment_id = (
+        select(Assignment.id)
+        .where(Assignment.vehicle_id == Vehicle.id, Assignment.status == "active")
+        .order_by(Assignment.start_time.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
     result = await db.execute(
         select(
             Vehicle.id,
@@ -92,12 +109,13 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
             Vehicle.speed,
             Vehicle.route_id,
             Vehicle.position_updated_at,
+            active_assignment_id.label("assignment_id"),
         ).where(Vehicle.id == vehicle_id)
     )
     row = result.first()
     if not row:
         return None
-    vid, plate, lat, lon, speed, route_id, pos_at = row
+    vid, plate, lat, lon, speed, route_id, pos_at, assignment_id = row
     if lat is None or lon is None:
         return None
     ts = pos_at.timestamp() if pos_at else datetime.now(timezone.utc).timestamp()
@@ -109,6 +127,7 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
         "speed": speed or 0.0,
         "timestamp": ts,
         "route_id": route_id,
+        "assignment_id": assignment_id,
     }
 
 
