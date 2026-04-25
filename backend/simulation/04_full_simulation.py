@@ -24,17 +24,26 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from api_client import APIClient
-from config import BASE_URL, GPS_PING_INTERVAL, SIMULATION_SPEED
+from config import (
+    ADMIN_PASSWORD,
+    ADMIN_USERNAME,
+    BASE_URL,
+    GPS_PING_INTERVAL,
+    SIMULATION_SPEED,
+)
 from gps_utils import haversine_m, interpolate_gps
 from route_loader import fetch_route_stops
 
 
 def load_state(filename: str = "simulation_state.json") -> dict[str, Any]:
+    state_path = Path(filename)
+    if not state_path.is_absolute():
+        state_path = SCRIPT_DIR / filename
     try:
-        with open(filename) as handle:
+        with open(state_path) as handle:
             return json.load(handle)
     except FileNotFoundError:
-        print(f"❌ {filename} not found. Run 01_setup.py first.")
+        print(f"❌ {state_path} not found. Run 01_setup.py first.")
         sys.exit(1)
 
 
@@ -132,10 +141,32 @@ class BusSimulation:
     def _ensure_admin(self) -> bool:
         if self.admin_client.token:
             return True
-        if self.admin_client.login("admin", "admin123"):
+        if self.admin_client.login(ADMIN_USERNAME, ADMIN_PASSWORD):
             return True
         self.log("❌ Admin login failed")
         return False
+
+    def _end_stale_assignments_for_vehicle(self) -> bool:
+        if not self._ensure_admin():
+            return False
+        active = self.admin_client.get("/assignments/active")
+        if not isinstance(active, list):
+            return False
+        ended = False
+        for item in active:
+            if item.get("vehicle_id") != self.vehicle.get("id"):
+                continue
+            assignment_id = item.get("id")
+            if assignment_id is None:
+                continue
+            result = self.admin_client.post(
+                "/assignments/end",
+                {"assignment_id": assignment_id},
+            )
+            if result is not None:
+                ended = True
+                self.log(f"Ended stale assignment id={assignment_id}")
+        return ended
 
     def driver_login(self) -> bool:
         if self.client.login(self.driver["username"], self.driver["password"]):
@@ -157,6 +188,14 @@ class BusSimulation:
             self.assignment_id = int(result["id"])
             self.log(f"Assignment started (id={self.assignment_id})")
             return True
+        if code == 409:
+            self.log("Vehicle already has an active assignment - attempting cleanup")
+            if self._end_stale_assignments_for_vehicle():
+                retry_code, retry_result = self.admin_client.post_status("/assignments/start", body)
+                if retry_code in (200, 201) and isinstance(retry_result, dict):
+                    self.assignment_id = int(retry_result["id"])
+                    self.log(f"Assignment started after cleanup (id={self.assignment_id})")
+                    return True
         detail = result.get("detail") if isinstance(result, dict) else result
         self.log(f"❌ Start assignment failed (HTTP {code}): {detail or 'no body'}")
         return False
