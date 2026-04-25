@@ -1,10 +1,11 @@
 """Retrain ML model from trip_history with feature engineering."""
 
-from datetime import datetime
 from pathlib import Path
 
 import joblib
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -47,11 +48,14 @@ async def train_from_db(db: AsyncSession, model_path: Path | None = None) -> tup
         dow = r.arrival_time.weekday() if r.arrival_time else 0
         X.append([r.stop_id, h, dow, _is_peak_hour(h), r.occupancy_level or 0])
         y.append(r.actual_travel_time or 0)
-    model = RandomForestRegressor(n_estimators=50, max_depth=10)
-    model.fit(X, y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestRegressor(n_estimators=80, max_depth=12, random_state=42, n_jobs=-1)
+    model.fit(X_train, y_train)
+    test_pred = model.predict(X_test)
+    mae = float(mean_absolute_error(y_test, test_pred))
     path = model_path or Path(__file__).parent / "delay_predictor.joblib"
     joblib.dump(model, path, compress=3)
-    return True, f"Trained on {len(rows)} samples"
+    return True, f"Trained on {len(rows)} samples; holdout MAE (seconds): {mae:.2f}"
 
 
 def get_feature_names() -> list[str]:

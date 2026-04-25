@@ -26,6 +26,13 @@ def _load_model():
     return None
 
 
+def reload_model() -> None:
+    """Clear lazy cache so the next predict loads disk again (after retrain)."""
+    global _model, _model_version
+    _model = None
+    _model_version = None
+
+
 def model_loaded() -> bool:
     """Health check: whether ML model is loaded."""
     return _load_model() is not None

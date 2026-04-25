@@ -178,9 +178,52 @@ async def trigger_training(
     db: AsyncSession = Depends(get_db),
 ):
     """Trigger ML model retraining from trip_history."""
+    from app.services.ai_predictor import reload_model
     from app.services.trainer import train_from_db
+
     success, msg = await train_from_db(db)
+    if success:
+        reload_model()
     return {"success": success, "message": msg}
+
+
+class EtaPreviewBody(BaseModel):
+    lat1: float
+    lon1: float
+    lat2: float
+    lon2: float
+    num_stops: int = 0
+    base_dwell_time: int = 30
+    stop_id: int | None = None
+    occupancy_level: int = 0
+
+
+@router.post("/admin/eta/preview")
+async def eta_preview(
+    body: EtaPreviewBody,
+    current_user: RequireAdmin,
+    db: AsyncSession = Depends(get_db),
+):
+    """Heuristic vs ML ETA (respects admin DB toggle over env)."""
+    from app.services.eta_engine import get_final_eta
+
+    use_ml = await crud_settings.get_use_ml_for_prod(db)
+    final, h_eta, mode = get_final_eta(
+        body.lat1,
+        body.lon1,
+        body.lat2,
+        body.lon2,
+        num_stops=body.num_stops,
+        base_dwell_time=body.base_dwell_time,
+        stop_id=body.stop_id,
+        occupancy_level=body.occupancy_level,
+        use_ml_for_prod=use_ml,
+    )
+    return {
+        "eta_seconds": final,
+        "heuristic_eta_seconds": h_eta,
+        "mode": mode,
+    }
 
 
 @router.get("/admin/settings")
@@ -190,8 +233,8 @@ async def get_admin_settings(
     
 ):
     """Get runtime settings (use_ml_for_prod, etc)."""
-    use_ml = await crud_settings.get_setting(db, "use_ml_for_prod")
-    return {"use_ml_for_prod": use_ml == "true" if use_ml else False}
+    use_ml = await crud_settings.get_use_ml_for_prod(db)
+    return {"use_ml_for_prod": use_ml}
 
 
 @router.put("/admin/settings")

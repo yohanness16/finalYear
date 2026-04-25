@@ -1,13 +1,12 @@
 """Assignment CRUD operations."""
 
 from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.assignment import Assignment
-from app.models.route import Route
-from app.models.vehicle import Vehicle
 
 
 async def get_active_assignment_by_driver(db: AsyncSession, driver_id: int) -> Assignment | None:
@@ -31,6 +30,20 @@ async def get_active_assignment_by_vehicle(db: AsyncSession, vehicle_id: int) ->
     return result.scalar_one_or_none()
 
 
+async def list_active_assignments(db: AsyncSession) -> list[Assignment]:
+    result = await db.execute(
+        select(Assignment)
+        .where(Assignment.status == "active")
+        .options(
+            selectinload(Assignment.vehicle),
+            selectinload(Assignment.route),
+            selectinload(Assignment.driver),
+        )
+        .order_by(Assignment.start_time.desc())
+    )
+    return list(result.scalars().unique().all())
+
+
 async def create_assignment(db: AsyncSession, driver_id: int, vehicle_id: int, route_id: int) -> Assignment:
     assignment = Assignment(driver_id=driver_id, vehicle_id=vehicle_id, route_id=route_id, status="active")
     db.add(assignment)
@@ -48,3 +61,8 @@ async def end_assignment(db: AsyncSession, assignment_id: int) -> Assignment | N
         await db.flush()
         await db.refresh(assignment)
     return assignment
+
+
+async def get_assignment_by_id(db: AsyncSession, assignment_id: int) -> Assignment | None:
+    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
+    return result.scalar_one_or_none()

@@ -1,36 +1,33 @@
-"""Route and RouteStop models."""
+"""Route and Stop models for public bus routes."""
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
-
-
 class Route(Base):
-    """Static path definition."""
-
+    """Bus route definition (e.g., "121 Kality ↔ Meskel Square")."""
     __tablename__ = "routes"
 
     id = Column(Integer, primary_key=True, index=True)
     route_number = Column(String(20), unique=True, nullable=False, index=True)
-    name = Column(String(200), nullable=True)
+    name = Column(String(200), nullable=False)
     origin = Column(String(100), nullable=True)
     destination = Column(String(100), nullable=True)
+    active = Column(Boolean, default=True, nullable=False)
 
+    vehicles = relationship("Vehicle", back_populates="route")
     route_stops = relationship(
         "RouteStop", back_populates="route", order_by="RouteStop.sequence_order"
     )
+
     assignments = relationship("Assignment", back_populates="route")
     favorites = relationship("Favorite", back_populates="route")
     notification_settings = relationship("NotificationSetting", back_populates="route")
-
-
 class RouteStop(Base):
-    """Stop sequence per route."""
-
+    """Stop sequence per route with GPS and operational details."""
     __tablename__ = "route_stops"
 
-    route_id = Column(Integer, ForeignKey("routes.id"), primary_key=True)
+    route_id = Column(Integer, ForeignKey("routes.id", ondelete="CASCADE"), primary_key=True)
     stop_id = Column(Integer, ForeignKey("stops.id"), primary_key=True)
     sequence_order = Column(Integer, nullable=False)
 

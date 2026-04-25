@@ -1,0 +1,454 @@
+{
+  "drivers": [
+    {
+      "username": "driver_tadesse",
+      "email": "tadesse@bustrack.et",
+      "password": "Pass@1234",
+      "id": 23
+    },
+    {
+      "username": "driver_almaz",
+      "email": "almaz@bustrack.et",
+      "password": "Pass@1234",
+      "id": 24
+    },
+    {
+      "username": "driver_kebede",
+      "email": "kebede@bustrack.et",
+      "password": "Pass@1234",
+      "id": 25
+    },
+    {
+      "username": "driver_meron",
+      "email": "meron@bustrack.et",
+      "password": "Pass@1234",
+      "id": 26
+    },
+    {
+      "username": "driver_girma",
+      "email": "girma@bustrack.et",
+      "password": "Pass@1234",
+      "id": 27
+    },
+    {
+      "username": "driver_senait",
+      "email": "senait@bustrack.et",
+      "password": "Pass@1234",
+      "id": 28
+    },
+    {
+      "username": "driver_yohannes",
+      "email": "yohannes@bustrack.et",
+      "password": "Pass@1234",
+      "id": 29
+    },
+    {
+      "username": "driver_hana",
+      "email": "hana@bustrack.et",
+      "password": "Pass@1234",
+      "id": 30
+    },
+    {
+      "username": "driver_bekele",
+      "email": "bekele@bustrack.et",
+      "password": "Pass@1234",
+      "id": 31
+    },
+    {
+      "username": "driver_tigist",
+      "email": "tigist@bustrack.et",
+      "password": "Pass@1234",
+      "id": 32
+    }
+  ],
+  "passengers": [
+    {
+      "username": "passenger_sara",
+      "email": "sara@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_abebe",
+      "email": "abebe@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_fatuma",
+      "email": "fatuma@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_daniel",
+      "email": "daniel@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_hiwot",
+      "email": "hiwot@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_michael",
+      "email": "michael@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_blen",
+      "email": "blen@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_dawit",
+      "email": "dawit@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_tsion",
+      "email": "tsion@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_habtamu",
+      "email": "habtamu@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_liya",
+      "email": "liya@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_nardos",
+      "email": "nardos@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_rediet",
+      "email": "rediet@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_brook",
+      "email": "brook@gmail.com",
+      "password": "Pass@1234"
+    },
+    {
+      "username": "passenger_eden",
+      "email": "eden@gmail.com",
+      "password": "Pass@1234"
+    }
+  ],
+  "vehicles": [
+    {
+      "plate_number": "AA-3-B12345",
+      "device_id": "IMEI001234567890",
+      "id": 4
+    },
+    {
+      "plate_number": "AA-3-C23456",
+      "device_id": "IMEI002345678901",
+      "id": 5
+    },
+    {
+      "plate_number": "AA-3-D34567",
+      "device_id": "IMEI003456789012",
+      "id": 6
+    },
+    {
+      "plate_number": "AA-3-E45678",
+      "device_id": "IMEI004567890123",
+      "id": 7
+    },
+    {
+      "plate_number": "AA-3-F56789",
+      "device_id": "IMEI005678901234",
+      "id": 8
+    },
+    {
+      "plate_number": "AA-3-G67890",
+      "device_id": "IMEI006789012345",
+      "id": 9
+    },
+    {
+      "plate_number": "AA-3-H78901",
+      "device_id": "IMEI007890123456",
+      "id": 10
+    },
+    {
+      "plate_number": "AA-3-I89012",
+      "device_id": "IMEI008901234567",
+      "id": 11
+    },
+    {
+      "plate_number": "AA-3-J90123",
+      "device_id": "IMEI009012345678",
+      "id": 12
+    },
+    {
+      "plate_number": "AA-3-K01234",
+      "device_id": "IMEI010123456789",
+      "id": 13
+    }
+  ],
+  "routes": {
+    "12": {
+      "route_id": 2,
+      "route_number": "12",
+      "name": "Megenagna - Mexico",
+      "stops": [
+        {
+          "name": "Megenagna",
+          "id": 2,
+          "lat": 9.0267,
+          "lon": 38.7613,
+          "is_terminal": true
+        },
+        {
+          "name": "Bole Michael",
+          "id": 3,
+          "lat": 9.0198,
+          "lon": 38.7556,
+          "is_terminal": false
+        },
+        {
+          "name": "Bole Road",
+          "id": 4,
+          "lat": 9.0144,
+          "lon": 38.7504,
+          "is_terminal": false
+        },
+        {
+          "name": "Awareness",
+          "id": 5,
+          "lat": 9.0065,
+          "lon": 38.7461,
+          "is_terminal": false
+        },
+        {
+          "name": "CMC",
+          "id": 6,
+          "lat": 9.0011,
+          "lon": 38.7423,
+          "is_terminal": false
+        },
+        {
+          "name": "Mexico",
+          "id": 7,
+          "lat": 8.9956,
+          "lon": 38.7385,
+          "is_terminal": true
+        }
+      ]
+    },
+    "45": {
+      "route_id": 3,
+      "route_number": "45",
+      "name": "Stadium - Ayat",
+      "stops": [
+        {
+          "name": "Stadium",
+          "id": 8,
+          "lat": 9.0086,
+          "lon": 38.761,
+          "is_terminal": true
+        },
+        {
+          "name": "Gofa Mebrat",
+          "id": 9,
+          "lat": 9.0013,
+          "lon": 38.7678,
+          "is_terminal": false
+        },
+        {
+          "name": "Kaliti",
+          "id": 10,
+          "lat": 8.9942,
+          "lon": 38.7745,
+          "is_terminal": false
+        },
+        {
+          "name": "Akaki",
+          "id": 11,
+          "lat": 8.9875,
+          "lon": 38.781,
+          "is_terminal": false
+        },
+        {
+          "name": "Ayat",
+          "id": 12,
+          "lat": 8.9803,
+          "lon": 38.788,
+          "is_terminal": true
+        }
+      ]
+    },
+    "21": {
+      "route_id": 4,
+      "route_number": "21",
+      "name": "Merkato - Bole Airport",
+      "stops": [
+        {
+          "name": "Merkato",
+          "id": 13,
+          "lat": 9.0193,
+          "lon": 38.7356,
+          "is_terminal": true
+        },
+        {
+          "name": "Piassa",
+          "id": 14,
+          "lat": 9.0245,
+          "lon": 38.7408,
+          "is_terminal": false
+        },
+        {
+          "name": "Arada",
+          "id": 15,
+          "lat": 9.0297,
+          "lon": 38.7461,
+          "is_terminal": false
+        },
+        {
+          "name": "Wavel",
+          "id": 16,
+          "lat": 9.021,
+          "lon": 38.752,
+          "is_terminal": false
+        },
+        {
+          "name": "Bole Airport",
+          "id": 17,
+          "lat": 9.035,
+          "lon": 38.799,
+          "is_terminal": true
+        }
+      ]
+    },
+    "67": {
+      "route_id": 5,
+      "route_number": "67",
+      "name": "Saris - Piassa",
+      "stops": [
+        {
+          "name": "Saris",
+          "id": 18,
+          "lat": 8.992,
+          "lon": 38.72,
+          "is_terminal": true
+        },
+        {
+          "name": "Gotera",
+          "id": 19,
+          "lat": 9.0001,
+          "lon": 38.7262,
+          "is_terminal": false
+        },
+        {
+          "name": "Tor Hailoch",
+          "id": 20,
+          "lat": 9.0078,
+          "lon": 38.732,
+          "is_terminal": false
+        },
+        {
+          "name": "Arat Kilo",
+          "id": 21,
+          "lat": 9.0156,
+          "lon": 38.738,
+          "is_terminal": false
+        },
+        {
+          "name": "Piassa",
+          "id": 14,
+          "lat": 9.0245,
+          "lon": 38.7408,
+          "is_terminal": true
+        }
+      ]
+    },
+    "89": {
+      "route_id": 6,
+      "route_number": "89",
+      "name": "Kazanchis - Lideta",
+      "stops": [
+        {
+          "name": "Kazanchis",
+          "id": 22,
+          "lat": 9.0167,
+          "lon": 38.7631,
+          "is_terminal": true
+        },
+        {
+          "name": "Bole Bridge",
+          "id": 23,
+          "lat": 9.0133,
+          "lon": 38.758,
+          "is_terminal": false
+        },
+        {
+          "name": "Bambis",
+          "id": 24,
+          "lat": 9.0101,
+          "lon": 38.7529,
+          "is_terminal": false
+        },
+        {
+          "name": "Stadium",
+          "id": 8,
+          "lat": 9.0086,
+          "lon": 38.761,
+          "is_terminal": false
+        },
+        {
+          "name": "Lideta",
+          "id": 25,
+          "lat": 9.0048,
+          "lon": 38.749,
+          "is_terminal": true
+        }
+      ]
+    },
+    "33": {
+      "route_id": 7,
+      "route_number": "33",
+      "name": "Megenagna - Saris",
+      "stops": [
+        {
+          "name": "Megenagna",
+          "id": 2,
+          "lat": 9.0267,
+          "lon": 38.7613,
+          "is_terminal": true
+        },
+        {
+          "name": "Urael",
+          "id": 26,
+          "lat": 9.019,
+          "lon": 38.7567,
+          "is_terminal": false
+        },
+        {
+          "name": "Kality",
+          "id": 27,
+          "lat": 9.0112,
+          "lon": 38.7523,
+          "is_terminal": false
+        },
+        {
+          "name": "Gofa",
+          "id": 28,
+          "lat": 9.0035,
+          "lon": 38.7345,
+          "is_terminal": false
+        },
+        {
+          "name": "Saris",
+          "id": 18,
+          "lat": 8.992,
+          "lon": 38.72,
+          "is_terminal": true
+        }
+      ]
+    }
+  }
+}
