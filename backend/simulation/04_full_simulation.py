@@ -470,7 +470,17 @@ class PassengerSimulation:
     def rate_journey(self) -> None:
         if not self.user_id:
             return
-        assignment_id = random.randint(1, 40)
+        live_positions = self.client.get("/vehicles/positions") or {}
+        positions = live_positions.get("positions", {}) if isinstance(live_positions, dict) else {}
+        live_assignment_ids = [
+            pos.get("assignment_id")
+            for pos in positions.values()
+            if isinstance(pos, dict) and pos.get("assignment_id")
+        ]
+        assignment_id = random.choice(live_assignment_ids) if live_assignment_ids else None
+        if assignment_id is None:
+            self.log("⚠️ No active assignment available for rating")
+            return
         score = random.choices([1, 2, 3, 4, 5], weights=[0.05, 0.1, 0.2, 0.35, 0.3])[0]
         result = self.client.post(
             "/ratings",
