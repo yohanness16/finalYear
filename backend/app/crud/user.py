@@ -1,6 +1,7 @@
 """User CRUD operations."""
 
-from sqlalchemy import select , delete, update
+from sqlalchemy import delete, select, update
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -33,6 +34,20 @@ async def get_all_users(db: AsyncSession):
 async def get_users_by_role(db: AsyncSession, role: str):
     """Fetch users filtered by a specific role (e.g., 'driver', 'admin')."""
     result = await db.execute(select(User).where(User.role == role))
+    return result.scalars().all()
+
+
+async def search_users(db: AsyncSession, query: str):
+    """Search users by username or email."""
+    pattern = f"%{query}%"
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.username.ilike(pattern),
+                User.email.ilike(pattern),
+            )
+        )
+    )
     return result.scalars().all()
 
 async def delete_user(db: AsyncSession, user_id: int):
