@@ -1,6 +1,8 @@
 """CV engine density estimation tests."""
 
-from app.services.cv_engine import estimate_density
+import pytest
+
+from app.services.cv_engine import estimate_density, estimate_density_from_image
 
 
 def test_estimate_density_low():
@@ -17,3 +19,33 @@ def test_estimate_density_medium():
 def test_estimate_density_high():
     assert estimate_density(7000) == 2
     assert estimate_density(10000) == 2
+
+
+def test_estimate_density_from_image_invalid_bytes_returns_low():
+    assert estimate_density_from_image(b"not-an-image") == 0
+
+
+@pytest.mark.parametrize(
+    "black_ratio, expected",
+    [
+        (0.10, 0),
+        (0.50, 1),
+        (0.90, 2),
+    ],
+)
+def test_estimate_density_from_image_levels(black_ratio, expected):
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+
+    h, w = 100, 100
+    img = np.full((h, w, 3), 255, dtype=np.uint8)
+    black_pixels = int(h * w * black_ratio)
+    rows = black_pixels // w
+    if rows > 0:
+        img[:rows, :] = 0
+
+    ok, encoded = cv2.imencode(".jpg", img)
+    assert ok is True
+
+    level = estimate_density_from_image(encoded.tobytes())
+    assert level == expected
