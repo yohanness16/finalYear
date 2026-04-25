@@ -240,44 +240,100 @@
         }
       ]
     },
-    "45": {
-      "route_id": 3,
-      "route_number": "45",
-      "name": "Stadium - Ayat",
+    "121": {
+      "route_id": 1,
+      "route_number": "121",
+      "name": "megenagna - mexico",
       "stops": [
         {
-          "name": "Stadium",
-          "id": 8,
-          "lat": 9.0086,
-          "lon": 38.761,
+          "name": "Kality Bus Station",
+          "id": 36,
+          "lat": 9.0167,
+          "lon": 38.7667,
           "is_terminal": true
         },
         {
-          "name": "Gofa Mebrat",
-          "id": 9,
-          "lat": 9.0013,
-          "lon": 38.7678,
+          "name": "Bole Road (near Ghana St)",
+          "id": 37,
+          "lat": 9.02,
+          "lon": 38.77,
           "is_terminal": false
         },
         {
-          "name": "Kaliti",
-          "id": 10,
-          "lat": 8.9942,
-          "lon": 38.7745,
+          "name": "Africa Avenue (near St. Joseph)",
+          "id": 38,
+          "lat": 9.025,
+          "lon": 38.775,
           "is_terminal": false
         },
         {
-          "name": "Akaki",
-          "id": 11,
-          "lat": 8.9875,
-          "lon": 38.781,
+          "name": "Meskel Square",
+          "id": 39,
+          "lat": 9.03,
+          "lon": 38.78,
+          "is_terminal": true
+        }
+      ]
+    },
+    "122": {
+      "route_id": 8,
+      "route_number": "122",
+      "name": "Akaki \u2194 Entoto Hills",
+      "stops": [
+        {
+          "name": "Akaki Terminal",
+          "id": 29,
+          "lat": 9.0,
+          "lon": 38.75,
+          "is_terminal": true
+        },
+        {
+          "name": "Bole International Approach",
+          "id": 30,
+          "lat": 9.012,
+          "lon": 38.76,
           "is_terminal": false
         },
         {
-          "name": "Ayat",
-          "id": 12,
-          "lat": 8.9803,
-          "lon": 38.788,
+          "name": "Entoto Hills Base",
+          "id": 31,
+          "lat": 9.045,
+          "lon": 38.78,
+          "is_terminal": false
+        },
+        {
+          "name": "Entoto Hills Summit",
+          "id": 32,
+          "lat": 9.05,
+          "lon": 38.785,
+          "is_terminal": true
+        }
+      ]
+    },
+    "150": {
+      "route_id": 9,
+      "route_number": "150",
+      "name": "Gulele \u2194 Saris",
+      "stops": [
+        {
+          "name": "Gulele Square",
+          "id": 33,
+          "lat": 9.038,
+          "lon": 38.745,
+          "is_terminal": true
+        },
+        {
+          "name": "Wollo Sefer",
+          "id": 34,
+          "lat": 9.04,
+          "lon": 38.755,
+          "is_terminal": false
+        },
+        {
+          "name": "Saris Market",
+          "id": 35,
+          "lat": 9.048,
+          "lon": 38.76,
           "is_terminal": true
         }
       ]
@@ -324,90 +380,6 @@
         }
       ]
     },
-    "67": {
-      "route_id": 5,
-      "route_number": "67",
-      "name": "Saris - Piassa",
-      "stops": [
-        {
-          "name": "Saris",
-          "id": 18,
-          "lat": 8.992,
-          "lon": 38.72,
-          "is_terminal": true
-        },
-        {
-          "name": "Gotera",
-          "id": 19,
-          "lat": 9.0001,
-          "lon": 38.7262,
-          "is_terminal": false
-        },
-        {
-          "name": "Tor Hailoch",
-          "id": 20,
-          "lat": 9.0078,
-          "lon": 38.732,
-          "is_terminal": false
-        },
-        {
-          "name": "Arat Kilo",
-          "id": 21,
-          "lat": 9.0156,
-          "lon": 38.738,
-          "is_terminal": false
-        },
-        {
-          "name": "Piassa",
-          "id": 14,
-          "lat": 9.0245,
-          "lon": 38.7408,
-          "is_terminal": true
-        }
-      ]
-    },
-    "89": {
-      "route_id": 6,
-      "route_number": "89",
-      "name": "Kazanchis - Lideta",
-      "stops": [
-        {
-          "name": "Kazanchis",
-          "id": 22,
-          "lat": 9.0167,
-          "lon": 38.7631,
-          "is_terminal": true
-        },
-        {
-          "name": "Bole Bridge",
-          "id": 23,
-          "lat": 9.0133,
-          "lon": 38.758,
-          "is_terminal": false
-        },
-        {
-          "name": "Bambis",
-          "id": 24,
-          "lat": 9.0101,
-          "lon": 38.7529,
-          "is_terminal": false
-        },
-        {
-          "name": "Stadium",
-          "id": 8,
-          "lat": 9.0086,
-          "lon": 38.761,
-          "is_terminal": false
-        },
-        {
-          "name": "Lideta",
-          "id": 25,
-          "lat": 9.0048,
-          "lon": 38.749,
-          "is_terminal": true
-        }
-      ]
-    },
     "33": {
       "route_id": 7,
       "route_number": "33",
@@ -449,6 +421,162 @@
           "is_terminal": true
         }
       ]
+    },
+    "45": {
+      "route_id": 3,
+      "route_number": "45",
+      "name": "Stadium - Ayat",
+      "stops": [
+        {
+          "name": "Stadium",
+          "id": 8,
+          "lat": 9.0086,
+          "lon": 38.761,
+          "is_terminal": true
+        },
+        {
+          "name": "Gofa Mebrat",
+          "id": 9,
+          "lat": 9.0013,
+          "lon": 38.7678,
+          "is_terminal": false
+        },
+        {
+          "name": "Kaliti",
+          "id": 10,
+          "lat": 8.9942,
+          "lon": 38.7745,
+          "is_terminal": false
+        },
+        {
+          "name": "Akaki",
+          "id": 11,
+          "lat": 8.9875,
+          "lon": 38.781,
+          "is_terminal": false
+        },
+        {
+          "name": "Ayat",
+          "id": 12,
+          "lat": 8.9803,
+          "lon": 38.788,
+          "is_terminal": true
+        }
+      ]
+    },
+    "67": {
+      "route_id": 5,
+      "route_number": "67",
+      "name": "Saris - Piassa",
+      "stops": [
+        {
+          "name": "Saris",
+          "id": 18,
+          "lat": 8.992,
+          "lon": 38.72,
+          "is_terminal": true
+        },
+        {
+          "name": "Gotera",
+          "id": 19,
+          "lat": 9.0001,
+          "lon": 38.7262,
+          "is_terminal": false
+        },
+        {
+          "name": "Tor Hailoch",
+          "id": 20,
+          "lat": 9.0078,
+          "lon": 38.732,
+          "is_terminal": false
+        },
+        {
+          "name": "Arat Kilo",
+          "id": 21,
+          "lat": 9.0156,
+          "lon": 38.738,
+          "is_terminal": false
+        },
+        {
+          "name": "Piassa",
+          "id": 14,
+          "lat": 9.0245,
+          "lon": 38.7408,
+          "is_terminal": false
+        }
+      ]
+    },
+    "89": {
+      "route_id": 6,
+      "route_number": "89",
+      "name": "Kazanchis - Lideta",
+      "stops": [
+        {
+          "name": "Kazanchis",
+          "id": 22,
+          "lat": 9.0167,
+          "lon": 38.7631,
+          "is_terminal": true
+        },
+        {
+          "name": "Bole Bridge",
+          "id": 23,
+          "lat": 9.0133,
+          "lon": 38.758,
+          "is_terminal": false
+        },
+        {
+          "name": "Bambis",
+          "id": 24,
+          "lat": 9.0101,
+          "lon": 38.7529,
+          "is_terminal": false
+        },
+        {
+          "name": "Stadium",
+          "id": 8,
+          "lat": 9.0086,
+          "lon": 38.761,
+          "is_terminal": true
+        },
+        {
+          "name": "Lideta",
+          "id": 25,
+          "lat": 9.0048,
+          "lon": 38.749,
+          "is_terminal": true
+        }
+      ]
+    },
+    "R207c14ab": {
+      "route_id": 12,
+      "route_number": "R207c14ab",
+      "name": "Route 207c14ab",
+      "stops": []
+    },
+    "R6fac0a2a": {
+      "route_id": 11,
+      "route_number": "R6fac0a2a",
+      "name": "Route 6fac0a2a",
+      "stops": []
+    },
+    "R74723d3f": {
+      "route_id": 10,
+      "route_number": "R74723d3f",
+      "name": "Route 74723d3f",
+      "stops": []
+    },
+    "R7a14c352": {
+      "route_id": 13,
+      "route_number": "R7a14c352",
+      "name": "Route 7a14c352",
+      "stops": []
+    },
+    "Raff2507d": {
+      "route_id": 14,
+      "route_number": "Raff2507d",
+      "name": "Route aff2507d",
+      "stops": []
     }
   }
 }
