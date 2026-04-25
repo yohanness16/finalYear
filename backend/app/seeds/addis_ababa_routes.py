@@ -1,10 +1,10 @@
 """Seed Addis Ababa bus routes with stops and GPS coordinates."""
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.route import Route, RouteStop
 from app.models.stop import Stop
-from app.models.vehicle import Vehicle
-from sqlalchemy.ext.asyncio import AsyncSession
-import asyncio
 
 ADDIS_ABABA_ROUTES_SEED = [
     {
@@ -43,13 +43,16 @@ ADDIS_ABABA_ROUTES_SEED = [
         ],
     },
 ]
+
+
 async def seed_addis_ababa_routes(db: AsyncSession) -> None:
     """Seed routes, stops, and route-stop links if not already present."""
-    # Avoid duplicates
     for item in ADDIS_ABABA_ROUTES_SEED:
         route = (
-            db.query(Route).filter_by(route_number=item["route_number"]).first()
-        )
+            await db.execute(
+                select(Route).where(Route.route_number == item["route_number"])
+            )
+        ).scalar_one_or_none()
         if route:
             continue
 
@@ -65,10 +68,10 @@ async def seed_addis_ababa_routes(db: AsyncSession) -> None:
 
         for stop_data in item["stops"]:
             stop = (
-                db.query(Stop)
-                .filter_by(name=stop_data["name"])
-                .first()
-            )
+                await db.execute(
+                    select(Stop).where(Stop.name == stop_data["name"])
+                )
+            ).scalar_one_or_none()
             if not stop:
                 stop = Stop(
                     name=stop_data["name"],
@@ -84,7 +87,7 @@ async def seed_addis_ababa_routes(db: AsyncSession) -> None:
             route_stop = RouteStop(
                 route_id=route.id,
                 stop_id=stop.id,
-                sequence_order=stop_data["sequence_order"],
+                sequence_order=stop_data["sequence"],
             )
             db.add(route_stop)
 
