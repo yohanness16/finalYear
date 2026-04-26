@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import RequireAdmin
 from app.crud import user as crud_user
 from app.db.session import get_db
-from app.schemas.auth import AdminCreateUserRequest
+from app.schemas.auth import AdminCreateUserRequest, AdminUpdateUserRequest
 from app.schemas.user import UserResponse
 
 router = APIRouter()
@@ -65,7 +65,7 @@ async def delete_user(
 @router.put("/update/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
-    body: AdminCreateUserRequest,
+    body: AdminUpdateUserRequest,
     current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db)
 ):
@@ -73,6 +73,14 @@ async def update_user(
     user = await crud_user.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(404, "User not found")
+
+    existing_username = await crud_user.get_user_by_username(db, body.username)
+    if existing_username and existing_username.id != user_id:
+        raise HTTPException(400, "Username already registered")
+
+    existing_email = await crud_user.get_user_by_email(db, body.email)
+    if existing_email and existing_email.id != user_id:
+        raise HTTPException(400, "Email already registered")
 
     update_data = {
         "username": body.username,

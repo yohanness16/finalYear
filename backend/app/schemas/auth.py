@@ -36,3 +36,12 @@ class AdminCreateUserRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)
     role: str = Field(..., pattern="^(driver|admin)$")
+
+
+class AdminUpdateUserRequest(BaseModel):
+    """Admin updates driver or admin accounts."""
+
+    username: str = Field(..., min_length=3, max_length=100)
+    email: EmailStr
+    password: str | None = Field(default=None, min_length=8, max_length=100)
+    role: str = Field(..., pattern="^(driver|admin)$")
