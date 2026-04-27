@@ -10,6 +10,7 @@ from app.crud import route as crud_route
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
 from app.models.vehicle import Vehicle
+from app.services.cv_engine import estimate_density
 from app.schemas.vehicle import (
     VehicleAdminUpdate,
     VehicleCreate,
@@ -121,6 +122,10 @@ async def receive_telemetry(
     if not vehicle:
         raise HTTPException(404, "Vehicle not registered")
 
+    occupancy_level = 0
+    if data.pixel_count is not None:
+        occupancy_level = estimate_density(data.pixel_count)
+
     await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0)
 
     from datetime import datetime, timezone
@@ -147,7 +152,12 @@ async def receive_telemetry(
         data.raw_payload,
     )
 
-    return {"status": "received", "vehicle_id": vehicle.id}
+    return {
+        "status": "received",
+        "vehicle_id": vehicle.id,
+        "occupancy_level": occupancy_level,
+        "route_checked": bool(vehicle.route_id),
+    }
 
 
 async def _save_raw_telemetry(
@@ -165,3 +175,4 @@ async def _save_raw_telemetry(
             db, vehicle_id, lat, lon, pixel_count, raw_payload
         )
         await db.commit()
+
