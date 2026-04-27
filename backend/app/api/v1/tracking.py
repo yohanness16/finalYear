@@ -142,4 +142,9 @@ async def receive_telemetry(
         ts,
     )
 
-    return {"status": "received", "route_checked": bool(vehicle.route_id)}
+    return {
+        "status": "received",
+        "vehicle_id": vehicle.id,
+        "occupancy_level": occupancy,
+        "route_checked": bool(vehicle.route_id),
+    }
