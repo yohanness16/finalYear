@@ -13,6 +13,7 @@ from app.api.v1 import (
     admin_users,
     admin_dashboard,
     tracking,
+    gateway,
     users,
     vehicles,
     routes,
@@ -58,6 +59,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(admin_users.router, prefix="/api/v1", tags=["admin"])
 app.include_router(admin_dashboard.router, prefix="/api/v1", tags=["admin"])
 app.include_router(tracking.router, prefix="/api/v1", tags=["tracking"])
+app.include_router(gateway.router, prefix="/api/v1", tags=["gateway"])
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(vehicles.router, prefix="/api/v1", tags=["vehicles"])
 app.include_router(routes.router, prefix="/api/v1", tags=["routes"])
