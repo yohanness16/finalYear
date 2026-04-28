@@ -1,8 +1,14 @@
 """CV engine density estimation tests."""
 
+from pathlib import Path
+
 import pytest
 
-from app.services.cv_engine import estimate_density, estimate_density_from_image
+from app.services.cv_engine import (
+    count_people_from_image,
+    estimate_density,
+    estimate_density_from_image,
+)
 
 
 def test_estimate_density_low():
@@ -23,6 +29,19 @@ def test_estimate_density_high():
 
 def test_estimate_density_from_image_invalid_bytes_returns_low():
     assert estimate_density_from_image(b"not-an-image") == 0
+
+
+def test_count_people_from_real_frame_detects_humans():
+    pytest.importorskip("cv2")
+
+    image_path = Path("storage/esp32_images/esp32_20260428T150244Z_578c02b0.jpg")
+    image_bytes = image_path.read_bytes()
+
+    count = count_people_from_image(image_bytes)
+    assert count >= 1
+
+    level = estimate_density_from_image(image_bytes)
+    assert level in {0, 1, 2}
 
 
 @pytest.mark.parametrize(
