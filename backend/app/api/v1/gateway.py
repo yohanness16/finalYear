@@ -63,9 +63,56 @@ async def _save_raw_telemetry(
     )
 
 
+async def _upsert_bus_for_device(
+    db: AsyncSession,
+    device_id: str,
+    plate_number: str | None,
+    bus_type: str | None,
+    capacity: int | None,
+) -> tuple["Vehicle", bool]:
+    """Create or update a bus record from ESP telemetry metadata."""
+    from app.models.vehicle import Vehicle
+
+    existing = await crud_vehicle.get_vehicle_by_device_id(db, device_id)
+    target_plate = plate_number or _default_plate_from_device_id(device_id)
+    target_type = bus_type or "Anbessa"
+    target_capacity = capacity if capacity and capacity > 0 else None
+
+    if existing:
+        if plate_number and existing.plate_number != plate_number:
+            duplicate = await crud_vehicle.get_vehicle_by_plate(db, plate_number)
+            if duplicate and duplicate.id != existing.id:
+                raise ValueError("plate_number already registered")
+            existing.plate_number = plate_number
+        if bus_type:
+            existing.bus_type = bus_type
+        if target_capacity is not None:
+            existing.capacity = target_capacity
+        existing.is_active = True
+        await db.flush()
+        await db.refresh(existing, ["route"])
+        return existing, False
+
+    if await crud_vehicle.get_vehicle_by_plate(db, target_plate):
+        raise ValueError("plate_number already registered")
+
+    vehicle = await crud_vehicle.create_vehicle(
+        db,
+        plate_number=target_plate,
+        device_id=device_id,
+        bus_type=target_type,
+        capacity=target_capacity,
+        is_active=True,
+    )
+    await db.refresh(vehicle, ["route"])
+    return vehicle, True
+
+
 @router.post("/gateway/esp32/telemetry")
 async def receive_esp32_telemetry(
     device_id: str = Form(...),
+    plate_number: str | None = Form(None),
+    bus_type: str | None = Form(None),
     lat: float = Form(...),
     lon: float = Form(...),
     speed: float = Form(0.0),
@@ -74,16 +121,16 @@ async def receive_esp32_telemetry(
     db: AsyncSession = Depends(get_db),
 ):
     """Receive multipart telemetry from an ESP32-CAM gateway."""
-    vehicle = await crud_vehicle.get_vehicle_by_device_id(db, device_id)
-    if not vehicle:
-        vehicle = await crud_vehicle.create_vehicle(
+    try:
+        vehicle, created = await _upsert_bus_for_device(
             db,
-            plate_number=_default_plate_from_device_id(device_id),
-            device_id=device_id,
-            bus_type="ESP32-CAM",
-            capacity=bus_capacity or None,
-            is_active=True,
+            device_id,
+            plate_number,
+            bus_type,
+            bus_capacity,
         )
+    except ValueError as exc:
+        return {"status": "rejected", "reason": str(exc)}
 
     image_bytes = await image.read()
     people_count = count_people_from_image(image_bytes)
@@ -106,6 +153,10 @@ async def receive_esp32_telemetry(
 
     raw_payload = {
         "source": "esp32_cam",
+        "device_id": device_id,
+        "plate_number": vehicle.plate_number,
+        "bus_type": vehicle.bus_type,
+        "capacity": vehicle.capacity or bus_capacity,
         "image_filename": image.filename,
         "image_saved": image_saved,
         "image_path": image_path,
@@ -149,11 +200,17 @@ async def receive_esp32_telemetry(
         speed,
         vehicle.route_id,
         ts,
+        bus_type=vehicle.bus_type,
+        image_path=image_path if image_saved else None,
     )
 
     return {
         "status": "received",
         "vehicle_id": vehicle.id,
+        "plate_number": vehicle.plate_number,
+        "bus_type": vehicle.bus_type,
+        "capacity": vehicle.capacity,
+        "created": created,
         "occupancy_level": occupancy_level,
         "image_saved": image_saved,
         "image_path": image_path,
