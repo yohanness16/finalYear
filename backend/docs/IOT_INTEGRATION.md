@@ -2,9 +2,9 @@
 
 This project connects buses or gateway devices to the backend through HTTP telemetry endpoints and a live WebSocket stream for the admin dashboard.
 
-## 1. Register the device in the system
+## 1. Register the device in the system (recommended)
 
-Before a device can send telemetry, it must be linked to a vehicle record.
+You can pre-register a bus for clean naming, route assignment, and capacity defaults.
 
 Use the vehicle registration endpoint:
 
@@ -21,6 +21,12 @@ curl -X POST http://localhost:8000/api/v1/vehicles \
 ```
 
 `device_id` should be the unique hardware identifier on the bus, such as a SIM7600 IMEI or another serial ID you keep stable on the device.
+
+Auto-provision behavior:
+
+- `POST /api/v1/gateway/esp32/telemetry` and `POST /api/v1/vehicles/telemetry` now auto-create a vehicle when `device_id` is new.
+- Auto-created buses get a generated plate like `ESP-<device_tail>`, are set `is_active=true`, and immediately become visible in `/vehicles` and `/vehicles/positions`.
+- Manual registration is still preferred so you can control plate number, route assignment, and metadata.
 
 ## 2. Send GPS telemetry from the device
 
@@ -116,7 +122,7 @@ Important settings live in `.env`:
 
 ## 7. Common device errors
 
-- `Vehicle not registered` means the `device_id` does not exist in the vehicles table.
+- `Vehicle not registered` mainly applies to strict telemetry paths that do not auto-provision. Gateway and `/vehicles/telemetry` now auto-create missing devices.
 - `off_route` means the vehicle has a route assigned and the GPS point is outside the allowed corridor.
 - `gps_outlier` means the point jumped too far from recent history.
 - If camera uploads always return `occupancy_level: 0`, confirm that the image is actually multipart form data and that OpenCV is installed in the runtime.
@@ -158,7 +164,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-2. Register the bus with the same `device_id` used in firmware:
+2. (Recommended) Register the bus with the same `device_id` used in firmware:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/vehicles \
@@ -183,7 +189,7 @@ Open `firmware/esp32_cam_neo6m/esp32_cam_neo6m.ino` and set these values:
 - `BACKEND_HOST` (your backend PC LAN IP)
 - `BACKEND_PORT` (default `8000`)
 - `BACKEND_PATH` (keep `/api/v1/gateway/esp32/telemetry`)
-- `DEVICE_ID` (must match the registered vehicle)
+- `DEVICE_ID` (stable unique id; if not pre-registered, backend auto-creates the vehicle)
 - `BUS_CAPACITY`
 
 What this firmware does automatically:
@@ -224,6 +230,13 @@ curl http://localhost:8000/api/v1/vehicles/positions
 You should see your vehicle id with `lat`, `lon`, and `timestamp`.
 
 3. Open admin dashboard map (or your live page that uses vehicle positions / ws stream). The vehicle marker should update as GPS changes.
+
+Quick visibility checklist when using ESP buses:
+
+1. Use the map page with filters cleared (`All routes`, `All stops`, `All levels`, `Min capacity = 0`).
+2. Confirm your ESP `device_id` exists in `GET /api/v1/vehicles` (auto-created or manually created).
+3. Confirm the same vehicle id appears in `GET /api/v1/vehicles/positions` with fresh timestamp.
+4. If the marker is not moving, check GPS fix in serial output first.
 
 ## 14. Why you might not see the bus on dashboard
 
