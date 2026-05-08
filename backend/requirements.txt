@@ -13,6 +13,8 @@ opencv-python-headless
 numpy
 scikit-learn
 joblib
+pandas
+matplotlib
 httpx
 geoalchemy2
 slowapi
