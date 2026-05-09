@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.route import Route, RouteStop
 from app.models.stop import Stop
+from app.utils.gps_validation import haversine_meters
 
 
 async def get_route_stops_ordered(db: AsyncSession, route_id: int) -> list[Stop]:
@@ -42,6 +43,27 @@ async def get_stop_by_id(db: AsyncSession, stop_id: int) -> Stop | None:
 async def get_stops(db: AsyncSession, skip: int = 0, limit: int = 100) -> list[Stop]:
     result = await db.execute(select(Stop).offset(skip).limit(limit))
     return list(result.scalars().all())
+
+
+async def get_nearest_stop(db: AsyncSession, lat: float, lon: float) -> Stop | None:
+    """Return the nearest stop to the provided coordinates."""
+    result = await db.execute(select(Stop))
+    stops = list(result.scalars().all())
+    if not stops:
+        return None
+    return min(stops, key=lambda s: haversine_meters(lat, lon, s.lat, s.lon))
+
+
+async def get_nearest_stops(
+    db: AsyncSession, lat: float, lon: float, limit: int = 3
+) -> list[Stop]:
+    """Return the nearest stops, ordered by distance."""
+    result = await db.execute(select(Stop))
+    stops = list(result.scalars().all())
+    if not stops:
+        return []
+    stops.sort(key=lambda s: haversine_meters(lat, lon, s.lat, s.lon))
+    return stops[: max(1, int(limit))]
 
 
 async def get_routes_through_stops(db: AsyncSession, start_stop_id: int, end_stop_id: int) -> list[Route]:
