@@ -48,6 +48,19 @@ class PointToPointSearch(BaseModel):
     end_stop_id: int
 
 
+class GeoJourneySearch(BaseModel):
+    """Search for buses using user-entered locations or coordinates."""
+
+    start_query: str | None = None
+    end_query: str | None = None
+    start_lat: float | None = None
+    start_lon: float | None = None
+    end_lat: float | None = None
+    end_lon: float | None = None
+    max_routes: int | None = None
+    max_buses: int | None = None
+
+
 class FavoriteCreate(BaseModel):
     user_id: int
     route_id: int
