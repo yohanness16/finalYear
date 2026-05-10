@@ -1,8 +1,9 @@
 """Master ETA service: heuristic vs ML with admin toggle."""
 
 from app.core.config import get_settings
-from app.services.eta_calc import calculate_eta_heuristic
-from app.services.ai_predictor import predict_delay
+from app.services.ai_predictor import predict_eta_adjustment
+from app.services.eta_calc import calculate_eta_heuristic, haversine_meters
+from app.services.ml_features import build_feature_dict, time_features
 
 
 def get_final_eta(
@@ -24,9 +25,26 @@ def get_final_eta(
     h_eta = calculate_eta_heuristic(
         lat1, lon1, lat2, lon2, num_stops, base_dwell_time, None, occupancy_level
     )
-    ml_eta = predict_delay(stop_id, occupancy_level)
+    distance_m = haversine_meters(lat1, lon1, lat2, lon2)
+    hour, dow, is_peak = time_features(None)
+    features = build_feature_dict(
+        route_id=0,
+        stop_id=int(stop_id or 0),
+        stop_sequence=max(1, num_stops),
+        remaining_stops=max(0, num_stops - 1),
+        distance_m=distance_m,
+        base_dwell_time=base_dwell_time,
+        peak_multiplier=1.0,
+        hour=hour,
+        day_of_week=dow,
+        is_peak=is_peak,
+        occupancy_level=occupancy_level,
+        heuristic_eta=float(h_eta),
+    )
+    ml_adjustment = predict_eta_adjustment(features)
     settings = get_settings()
     use_ml = settings.USE_ML_FOR_PROD if use_ml_for_prod is None else use_ml_for_prod
-    if use_ml and ml_eta is not None:
+    if use_ml and ml_adjustment is not None:
+        ml_eta = max(0.0, float(h_eta) + float(ml_adjustment))
         return (ml_eta, h_eta, "ml")
-    return (h_eta, h_eta, "heuristic")
+    return (float(h_eta), float(h_eta), "heuristic")
