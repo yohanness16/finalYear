@@ -1,14 +1,15 @@
-"""ML-based delay prediction. Loads .joblib model if available."""
+"""ML-based ETA adjustment prediction. Loads .joblib model if available."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from app.services.ml_features import FEATURE_NAMES, build_feature_dict, build_feature_vector, time_features
+
 _model = None
+_feature_names: list[str] = FEATURE_NAMES.copy()
 _model_version: Optional[str] = None
 _model_path = Path(__file__).parent / "delay_predictor.joblib"
-
-# Features must match trainer: stop_id, hour, day_of_week, is_peak_hour, occupancy_level
-FEATURE_COUNT = 5
 
 
 def _load_model():
@@ -18,7 +19,15 @@ def _load_model():
     if _model_path.exists():
         try:
             import joblib
-            _model = joblib.load(_model_path)
+            payload = joblib.load(_model_path)
+            if isinstance(payload, dict) and "model" in payload:
+                _model = payload.get("model")
+                names = payload.get("feature_names")
+                if isinstance(names, list) and names:
+                    global _feature_names
+                    _feature_names = [str(n) for n in names]
+            else:
+                _model = payload
             _model_version = str(_model_path.stat().st_mtime) if _model_path.exists() else None
             return _model
         except Exception:
@@ -44,23 +53,37 @@ def get_model_version() -> Optional[str]:
     return _model_version
 
 
-def predict_delay(stop_id: Optional[int], occupancy_level: int) -> Optional[float]:
-    """
-    Predict delay in seconds. Returns None if model not loaded.
-    Features: stop_id, hour, day_of_week, is_peak_hour, occupancy_level.
-    """
+def predict_eta_adjustment(features: dict) -> Optional[float]:
+    """Predict ETA adjustment in seconds. Returns None if model not loaded."""
     model = _load_model()
     if model is None:
         return None
-    from datetime import datetime
-    now = datetime.now()
-    hour = now.hour
-    dow = now.weekday()
-    is_peak = 1 if (7 <= hour < 10 or 16 <= hour < 20) else 0
-    stop_id = stop_id or 0
     try:
-        features = [[stop_id, hour, dow, is_peak, occupancy_level]]
-        pred = model.predict(features)
+        vector = build_feature_vector(features)
+        if len(vector) != len(_feature_names):
+            return None
+        pred = model.predict([vector])
         return float(pred[0])
     except Exception:
         return None
+
+
+def predict_delay(stop_id: Optional[int], occupancy_level: int) -> Optional[float]:
+    """Backward-compatible delay prediction using minimal features."""
+    now = datetime.now()
+    hour, dow, is_peak = time_features(now)
+    features = build_feature_dict(
+        route_id=0,
+        stop_id=int(stop_id or 0),
+        stop_sequence=0,
+        remaining_stops=0,
+        distance_m=0.0,
+        base_dwell_time=30,
+        peak_multiplier=1.0,
+        hour=hour,
+        day_of_week=dow,
+        is_peak=is_peak,
+        occupancy_level=int(occupancy_level or 0),
+        heuristic_eta=0.0,
+    )
+    return predict_eta_adjustment(features)
