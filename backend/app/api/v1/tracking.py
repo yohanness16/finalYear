@@ -103,6 +103,7 @@ async def receive_telemetry(
             data.speed or 0.0,
             occupancy,
             vehicle.route.route_number,
+            vehicle.route_id,
             route_stops,
         )
         try:
