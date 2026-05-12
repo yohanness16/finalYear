@@ -1,5 +1,7 @@
 """Point-to-point search and journey planning."""
 
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +41,17 @@ async def point_to_point_search(
                 data = await redis.hgetall(key)
             except Exception:
                 data = {}
+        if data:
+            # Provide a smooth live ETA between telemetry pings.
+            try:
+                eta_seconds = float(data.get("eta_seconds", 0))
+                computed_at = float(data.get("computed_at", 0))
+                if computed_at > 0:
+                    elapsed = max(0.0, time.time() - computed_at)
+                    live_eta = max(0, int(round(eta_seconds - elapsed)))
+                    data["eta_live_seconds"] = live_eta
+            except (TypeError, ValueError):
+                pass
         if data:
             results.append({"route_number": route.route_number, "etas": data})
         else:
