@@ -18,6 +18,12 @@ class APIClient:
         self.client = httpx.Client(timeout=15.0)
 
     def _headers(self):
+        h = {}
+        if self.token:
+            h["Authorization"] = f"Bearer {self.token}"
+        return h
+
+    def _json_headers(self):
         h = {"Content-Type": "application/json"}
         if self.token:
             h["Authorization"] = f"Bearer {self.token}"
@@ -28,7 +34,6 @@ class APIClient:
             r = self.client.post(
                 f"{self.base_url}/auth/login",
                 json={"username": username, "password": password},
-                headers={"Content-Type": "application/json"},
             )
             if r.status_code == 200:
                 self.token = r.json()["access_token"]
@@ -44,7 +49,6 @@ class APIClient:
             r = self.client.post(
                 f"{self.base_url}/auth/register",
                 json={"username": username, "email": email, "password": password},
-                headers={"Content-Type": "application/json"},
             )
             if r.status_code == 200:
                 return r.json()
@@ -59,9 +63,9 @@ class APIClient:
     def create_admin_user(self, username: str, email: str, password: str, role: str) -> Optional[dict]:
         try:
             r = self.client.post(
-                f"{self.base_url}/create",
+                f"{self.base_url}/admin/users",
                 json={"username": username, "email": email, "password": password, "role": role},
-                headers=self._headers(),
+                headers=self._json_headers(),
             )
             if r.status_code == 200:
                 return r.json()
@@ -79,7 +83,7 @@ class APIClient:
                 r = self.client.post(
                     f"{self.base_url}{path}",
                     json=data,
-                    headers=self._headers(),
+                    headers=self._json_headers(),
                 )
                 if r.status_code in (200, 201):
                     return r.json()
@@ -101,7 +105,7 @@ class APIClient:
             r = self.client.post(
                 f"{self.base_url}{path}",
                 json=data,
-                headers=self._headers(),
+                headers=self._json_headers(),
             )
             try:
                 body = r.json()
@@ -130,7 +134,7 @@ class APIClient:
             r = self.client.put(
                 f"{self.base_url}{path}",
                 json=data,
-                headers=self._headers(),
+                headers=self._json_headers(),
             )
             if r.status_code == 200:
                 return r.json()
@@ -142,12 +146,12 @@ class APIClient:
     def post_multipart(self, path: str, form_data: dict, files: dict, retries: int = 2) -> Optional[dict]:
         """
         POST with multipart form data and file uploads.
-        
+
         Args:
             path: API endpoint path
             form_data: dict of form fields
             files: dict of {field_name: (filename, file_bytes, content_type)}
-        
+
         Returns:
             Parsed JSON response or None
         """
@@ -157,16 +161,19 @@ class APIClient:
                 multipart_files = {}
                 for field, (filename, content, content_type) in files.items():
                     multipart_files[field] = (filename, content, content_type)
-                
+
+                # Do NOT set Content-Type header — httpx sets it automatically
+                # with the correct multipart boundary
                 headers = {}
                 if self.token:
                     headers["Authorization"] = f"Bearer {self.token}"
-                
+
                 r = self.client.post(
                     f"{self.base_url}{path}",
                     data=form_data,
                     files=multipart_files,
                     headers=headers,
+                    timeout=30.0,  # Longer timeout for image uploads
                 )
                 if r.status_code in (200, 201):
                     return r.json()
