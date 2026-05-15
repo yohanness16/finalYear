@@ -1,4 +1,4 @@
-# Python
+# ── Python ──
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,17 +8,17 @@ dist/
 build/
 *.egg
 
-# Virtual environment
+# ── Virtual environment ──
 env/
 venv/
 .venv/
 
-# Environment variables
+# ── Environment variables ──
 .env
 .env.local
 .env.*.local
 
-# IDE / Editor
+# ── IDE / Editor ──
 .marscode/
 .sixth/
 .vscode/
@@ -27,27 +27,43 @@ venv/
 *.swo
 *~
 
-# Testing & Coverage
+# ── Testing & Coverage ──
 .coverage
 htmlcov/
 .pytest_cache/
 coverage.xml
 *.cover
+test-results.xml
 
-# ML artifacts
+# ── ML artifacts ──
 *.joblib
 *.pkl
 *.h5
 ml_reports/
 
-# Generated data
+# ── Generated data ──
 abcd.txt
 asyncio
 storage/
+delay_predictor.joblib
 
-# OS
+# ── OS ──
 .DS_Store
 Thumbs.db
 
-# Frontend (admin panel is a separate repo)
+# ── Simulation (local dev only) ──
+simulation/
+
+# ── Terraform state ──
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ── Frontend (separate repo) ──
 ../bustrack-admin/
