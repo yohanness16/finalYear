@@ -11,15 +11,22 @@ settings = get_settings()
 _redis_client: Optional[redis.Redis] = None
 
 
+def _build_redis_kwargs(url: str) -> dict:
+    """Build kwargs for redis.from_url, handling Upstash TLS (rediss://)."""
+    kwargs: dict = {"encoding": "utf-8", "decode_responses": True}
+    if url.startswith("rediss://"):
+        import ssl
+        kwargs["ssl"] = True
+        kwargs["ssl_cert_reqs"] = "none"
+    return kwargs
+
+
 async def get_redis() -> redis.Redis:
     """Get Redis client instance."""
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(
-            settings.REDIS_URL,
-            encoding="utf-8",
-            decode_responses=True,
-        )
+        kwargs = _build_redis_kwargs(settings.REDIS_URL)
+        _redis_client = redis.from_url(settings.REDIS_URL, **kwargs)
     return _redis_client
 
 
