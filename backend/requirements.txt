@@ -18,6 +18,7 @@ matplotlib
 httpx
 geoalchemy2
 slowapi
+python-dotenv
 pytest
 pytest-asyncio
 httpx
