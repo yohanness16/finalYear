@@ -13,7 +13,7 @@
 #   ACR_USERNAME            — ACR username
 #   ACR_PASSWORD            — ACR password
 #   DATABASE_URL            — Supabase connection string
-#   REDIS_URL               — Upstash Redis URL
+#   REDIS_URL               — Upstash Redis URL (rediss://default:TOKEN@host:6379)
 #   SECRET_KEY              — JWT secret key
 #   RESEND_API_KEY          — Resend API key
 #   GOOGLE_CLIENT_ID        — Google OAuth Client ID
