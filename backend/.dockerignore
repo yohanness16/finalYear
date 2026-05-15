@@ -1,0 +1,49 @@
+# Git
+.git
+.github
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build
+env
+venv
+.venv
+
+# IDE
+.marscode
+.sixth
+.vscode
+.idea
+
+# Testing & Coverage
+.coverage
+htmlcov
+.pytest_cache
+test-results.xml
+
+# Docs
+docs/
+*.md
+LICENSE
+
+# Simulation
+simulation/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+abcd.txt
+asyncio
+ml_reports
