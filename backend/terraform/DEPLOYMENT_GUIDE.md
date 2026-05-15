@@ -1,131 +1,365 @@
-# BusTrack — Deployment Guide
+# BusTrack — Complete Azure Deployment Guide
 
-## Architecture
+## Architecture Overview
 
 ```
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Frontend   │────▶│  Azure App Service│────▶│  Supabase       │
-│  (Your App)  │     │  (FastAPI Docker) │     │  (PostgreSQL)   │
-└─────────────┘     └──────────────────┘     └─────────────────┘
-                           │    ▲
-                           │    │
-                           ▼    │
-                    ┌──────────────────┐     ┌─────────────────┐
-                    │  Upstash Redis   │     │  Resend         │
-                    │  (Live state +   │     │  (Email)        │
-                    │   caching)       │     │                 │
-                    └──────────────────┘     └─────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Azure Cloud                                   │
+│  ┌─────────────────────┐    ┌──────────────────────────────────┐    │
+│  │  Container Registry  │───▶│  App Service (Linux, Docker)     │    │
+│  │  (ACR)               │    │  ┌────────────────────────────┐  │    │
+│  └─────────────────────┘    │  │  FastAPI + OpenCV          │  │    │
+│                              │  │  Port 8000                  │  │    │
+│                              │  └──────────┬─────────────────┘  │    │
+│                              └─────────────┼────────────────────┘    │
+└────────────────────────────────────────────┼─────────────────────────┘
+                                             │
+                    ┌────────────────────────┼────────────────────────┐
+                    │                        │                        │
+                    ▼                        ▼                        ▼
+           ┌──────────────┐        ┌──────────────┐        ┌──────────────┐
+           │   Supabase   │        │   Upstash    │        │   Resend     │
+           │  PostgreSQL  │        │    Redis     │        │    Email     │
+           └──────────────┘        └──────────────┘        └──────────────┘
 ```
+
+## Prerequisites
+
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) installed
+- [Terraform](https://developer.hashicorp.com/terraform/install) installed
+- [Docker](https://docs.docker.com/get-docker/) installed
+- A GitHub account with this repo pushed
+
+---
 
 ## Step 1: Supabase Setup
 
-1. Go to [supabase.com](https://supabase.com) → New Project
-2. Wait for project to provision (~2 min)
-3. Go to **Settings → Database → Connection string**
-4. Copy the URI connection string
-5. Replace `postgresql://` with `postgresql+asyncpg://`
-6. Save this for `supabase_db_url`
+1. Go to [supabase.com](https://supabase.com) → **New Project**
+2. Choose a region close to your Azure deployment
+3. Wait ~2 minutes for provisioning
+4. Go to **Settings → Database → Connection string → URI**
+5. Copy the string and convert it:
+   ```
+   # Original:
+   postgresql://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
+   
+   # Change to (replace postgresql:// with postgresql+asyncpg://):
+   postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
+   ```
+6. Save this for later
 
 ### Run migrations on Supabase
 
 ```bash
-# Set the DATABASE_URL to your Supabase connection string
+cd backend
+
+# Temporarily set DATABASE_URL to Supabase
 export DATABASE_URL="postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres"
 
-# Run Alembic migrations
+# Run all migrations
 alembic upgrade head
+
+# Verify tables were created
+# Check Supabase Dashboard → Table Editor
 ```
+
+---
 
 ## Step 2: Upstash Redis Setup
 
-1. Go to [upstash.com](https://upstash.com) → Create Database
-2. Choose the closest region to your Azure App Service
-3. Go to **Details** tab → copy the **REST URL** and **REST Token**
-4. Save these for `upstash_redis_url` and `upstash_redis_token`
+1. Go to [upstash.com](https://upstash.com) → Sign up / Log in
+2. Click **Create Database**
+3. Name: `bustrack-redis`
+4. Region: pick the same region as your Azure App Service
+5. Click **Create**
+6. Go to **Details** tab
+7. Copy:
+   - **REST URL** → `https://xxx-xxx-xxx.upstash.io`
+   - **REST Token** → long string starting with `A...`
+8. Save both for later
+
+---
 
 ## Step 3: Resend Setup
 
 1. Go to [resend.com](https://resend.com) → Sign up
-2. Go to **API Keys** → Create API Key
-3. Save the key for `resend_api_key`
-4. (Optional) Verify your domain for production emails
+2. Go to **API Keys** → **Create API Key**
+3. Name: `bustrack-production`
+4. Copy the key (starts with `re_`)
+5. Save for later
+6. (Optional but recommended) Add and verify your domain at **Domains**
+
+---
 
 ## Step 4: Google OAuth Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
+2. Select your project (or create one)
 3. Go to **APIs & Services → Credentials**
 4. Click **Create Credentials → OAuth Client ID**
-5. Application type: **Web application**
-6. Add authorized JavaScript origins:
-   - `https://your-frontend-domain.com`
-   - `http://localhost:3000` (for development)
-7. Copy the Client ID for `google_client_id`
+5. If prompted, configure the OAuth consent screen first:
+   - User Type: **External**
+   - App name: `BusTrack`
+   - Add your email as support + developer
+   - Add scopes: `email`, `profile`, `openid`
+   - Add test users (your email) for testing
+6. Application type: **Web application**
+7. Name: `BusTrack Web`
+8. Authorized JavaScript origins:
+   ```
+   https://your-frontend-domain.com
+   http://localhost:3000
+   ```
+9. Click **Create**
+10. Copy the **Client ID** (ends with `.apps.googleusercontent.com`)
 
-## Step 5: Docker Image
+---
 
-### Build and push to Docker Hub
+## Step 5: Deploy Infrastructure with Terraform
+
+```bash
+cd backend/terraform
+
+# Initialize Terraform (downloads Azure provider)
+terraform init
+
+# Copy example variables
+cp variables.tfvars.example terraform.tfvars
+
+# Edit with your real values
+nano terraform.tfvars    # or use any editor
+
+# Preview what will be created
+terraform plan
+
+# Deploy! (~3-5 minutes)
+terraform apply
+```
+
+After apply, Terraform will output:
+```
+app_service_url     = "https://bustrack-prod-api.azurewebsites.net"
+acr_login_server    = "bustrackacr.azurecr.io"
+acr_admin_username  = "bustrack"
+acr_admin_password  = "..."
+```
+
+**Save these values!**
+
+---
+
+## Step 6: Push Docker Image to ACR
 
 ```bash
 cd backend
 
-# Build
-docker build -t yourdockerhub/bustrack:latest .
+# Login to Azure
+az login
 
-# Login
-docker login
+# Login to ACR
+az acr login --name bustrackacr
 
-# Push
-docker push yourdockerhub/bustrack:latest
+# Build the Docker image
+docker build -t bustrackacr.azurecr.io/bustrack-api:latest .
+
+# Push to ACR
+docker push bustrackacr.azurecr.io/bustrack-api:latest
 ```
 
-## Step 6: Deploy with Terraform
+---
+
+## Step 7: Configure App Service Environment
+
+The Terraform config sets environment variables automatically. Verify them:
 
 ```bash
-cd terraform
-
-# Initialize Terraform
-terraform init
-
-# Copy and edit variables
-cp variables.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your real values
-
-# Preview changes
-terraform plan
-
-# Deploy
-terraform apply
+# Check current settings
+az webapp config appsettings list \
+  --name bustrack-prod-api \
+  --resource-group bustrack-prod-rg \
+  --output table
 ```
 
-## Step 7: Verify Deployment
+If any are missing, set them manually:
 
 ```bash
-# Check health
+az webapp config appsettings set \
+  --name bustrack-prod-api \
+  --resource-group bustrack-prod-rg \
+  --settings \
+    DATABASE_URL="postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres" \
+    REDIS_URL="redis://default:TOKEN@xxx.upstash.io" \
+    SECRET_KEY="your-jwt-secret" \
+    GOOGLE_CLIENT_ID="xxx.apps.googleusercontent.com" \
+    RESEND_API_KEY="re_xxxxx" \
+    RESEND_FROM_EMAIL="noreply@bustrack.et" \
+    APP_BASE_URL="https://bustrack.et" \
+    CORS_ORIGINS="https://bustrack.et" \
+    FIREWALL_ENABLED="true" \
+    TRUSTED_PROXY_IPS="*" \
+    WEBSITES_PORT="8000"
+```
+
+---
+
+## Step 8: Verify Deployment
+
+```bash
+# Health check
 curl https://bustrack-prod-api.azurewebsites.net/health
+
+# Expected: {"status":"healthy"} or similar
 
 # Test registration
 curl -X POST https://bustrack-prod-api.azurewebsites.net/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@test.com","password":"Test@1234"}'
+  -d '{"username":"testuser","email":"test@example.com","password":"Test@1234"}'
+
+# Test login
+curl -X POST https://bustrack-prod-api.azurewebsites.net/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"Test@1234"}'
 ```
 
-## Free Tier Limits
+---
 
-| Service | Free Tier |
-|---------|-----------|
-| Azure App Service (B1) | 60 CPU minutes/day |
-| Supabase | 500 MB DB, 2 GB bandwidth/month |
-| Upstash | 10K commands/day, 256 MB |
-| Resend | 100 emails/day, 3000/month |
-| Google OAuth | Unlimited |
+## Step 9: Set Up CI/CD (GitHub Actions)
 
-## Cost Estimate (Production)
+### Create Azure Service Principal
 
-For a production deployment with more resources:
-- Azure App Service P1v2: ~$73/month
-- Supabase Pro: $25/month (if you outgrow free)
-- Upstash Pay-as-you-go: ~$5-10/month
-- Resend Free tier: $0 (up to 3000 emails/month)
+```bash
+# Create service principal for GitHub Actions
+az ad sp create-for-rbac \
+  --name "bustrack-github-actions" \
+  --role contributor \
+  --scopes /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/bustrack-prod-rg \
+  --sdk-auth
+```
 
-**Total for school project: $0/month** (all free tiers)
+Copy the entire JSON output.
+
+### Add GitHub Secrets
+
+Go to your GitHub repo → **Settings → Secrets and variables → Actions** → **New repository secret**
+
+Add these secrets:
+
+| Secret Name | Value |
+|---|---|
+| `AZURE_CREDENTIALS` | The JSON from `az ad sp create-for-rbac` |
+| `ACR_USERNAME` | From Terraform output |
+| `ACR_PASSWORD` | From Terraform output |
+| `DATABASE_URL` | Supabase connection string |
+| `REDIS_URL` | Upstash Redis URL |
+| `SECRET_KEY` | JWT secret key |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID |
+| `RESEND_API_KEY` | Resend API key |
+| `APP_BASE_URL` | Your frontend URL |
+| `CORS_ORIGINS` | Your frontend domains |
+
+### Test CI/CD
+
+```bash
+# Push to main — this triggers the CD workflow
+git add .
+git commit -m "trigger deployment"
+git push origin main
+```
+
+Go to GitHub → **Actions** tab → watch the CD workflow run.
+
+---
+
+## Step 10: Custom Domain & SSL (Optional)
+
+### Add Custom Domain
+
+```bash
+# Add custom domain to App Service
+az webapp config hostname add \
+  --webapp-name bustrack-prod-api \
+  --resource-group bustrack-prod-rg \
+  --hostname api.bustrack.et
+
+# Get the verification TXT record
+az webapp config hostname get-external-ip \
+  --webapp-name bustrack-prod-api \
+  --resource-group bustrack-prod-rg
+```
+
+### Add SSL Certificate
+
+```bash
+# Create managed certificate
+az webapp config ssl create \
+  --resource-group bustrack-prod-rg \
+  --name bustrack-prod-api \
+  --hostname api.bustrack.et
+
+# Bind certificate
+az webapp config ssl bind \
+  --resource-group bustrack-prod-rg \
+  --name bustrack-prod-api \
+  --hostname api.bustrack.et \
+  --ssl-type SniEnabled
+```
+
+---
+
+## Free Tier Limits & Costs
+
+| Service | Free Tier | Your Usage |
+|---------|-----------|------------|
+| **Azure App Service (B1)** | 60 CPU min/day | ✅ Enough for demo |
+| **Azure Container Registry (Basic)** | 10 GB storage | ✅ ~200 MB image |
+| **Supabase** | 500 MB DB, 2 GB bandwidth/month | ✅ Enough for project |
+| **Upstash** | 10K commands/day | ✅ Enough for project |
+| **Resend** | 100 emails/day, 3K/month | ✅ Enough for project |
+| **Google OAuth** | Unlimited | ✅ Free |
+
+**Total cost for school project: $0/month**
+
+---
+
+## Troubleshooting
+
+### App won't start
+```bash
+# Check logs
+az webapp log tail --name bustrack-prod-api --resource-group bustrack-prod-rg
+
+# Check container logs
+az webapp log download --name bustrack-prod-api --resource-group bustrack-prod-rg
+```
+
+### Database connection errors
+```bash
+# Verify Supabase allows Azure IPs
+# Supabase Dashboard → Settings → Network → Add Azure outbound IPs
+# Or allow all IPs (less secure, fine for project):
+# Supabase Dashboard → Settings → Network → Allow all
+```
+
+### Redis connection errors
+```bash
+# Verify Upstash allows connections from anywhere (default)
+# Upstash Console → Your DB → Access Control → Allow all
+```
+
+### Docker image not updating
+```bash
+# Force restart
+az webapp restart --name bustrack-prod-api --resource-group bustrack-prod-rg
+
+# Or push a new tag and update the App Service
+docker build -t bustrackacr.azurecr.io/bustrack-api:$(git rev-parse --short HEAD) .
+docker push bustrackacr.azurecr.io/bustrack-api:$(git rev-parse --short HEAD)
+```
+
+### View all environment variables
+```bash
+az webapp config appsettings list \
+  --name bustrack-prod-api \
+  --resource-group bustrack-prod-rg \
+  --output table
+```

@@ -1,6 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # BusTrack Terraform Variables — Example
-# Copy this file to terraform.tfvars and fill in real values
+# Copy to terraform.tfvars and fill in real values
 # NEVER commit terraform.tfvars to git!
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -8,21 +8,22 @@ project_name = "bustrack"
 environment  = "prod"
 location     = "eastus"
 
-# B1 = basic tier (cheapest that supports always-on), P1v2 = production
+# B1 = basic tier (cheapest with always-on), P1v2 = production
 app_service_sku = "B1"
 
-# Docker image (push to Docker Hub or ACR first)
-docker_image = "yourdockerhub/bustrack:latest"
+# Docker image — will be pushed to the ACR created by Terraform
+# Format: <acr-name>.azurecr.io/<image-name>:latest
+docker_image = "bustrackacr.azurecr.io/bustrack-api:latest"
 
 # ── Supabase ──
 # Get from Supabase Dashboard → Settings → Database → Connection string
-# Make sure to use the asyncpg-compatible format:
+# Use the asyncpg-compatible format:
 # postgresql+asyncpg://postgres:PASSWORD@db.xxx.supabase.co:5432/postgres
 supabase_db_url = "postgresql+asyncpg://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres"
 
 # ── Upstash Redis ──
 # Get from Upstash Console → Your Redis → REST API
-upstash_redis_url  = "https://xxx-xxx-xxx.upstash.io"
+upstash_redis_url   = "https://xxx-xxx-xxx.upstash.io"
 upstash_redis_token = "YOUR_UPSTASH_REST_TOKEN"
 
 # ── Resend ──
@@ -36,15 +37,10 @@ google_client_id = "xxx.apps.googleusercontent.com"
 
 # ── App Secrets ──
 # Generate with: openssl rand -hex 32
-secret_key = "your-jwt-secret-key-here"
+secret_key = "your-jwt-secret-key-here-min-32-chars"
 
 # Frontend URL for email links
 app_base_url = "https://bustrack.et"
 
 # CORS origins (your frontend domain)
 cors_origins = "https://bustrack.et,https://www.bustrack.et"
-
-# ── Docker Hub (leave empty for Docker Hub public images) ──
-docker_registry_url      = ""
-docker_registry_username = ""
-docker_registry_password = ""

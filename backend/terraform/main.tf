@@ -2,15 +2,21 @@
 # BusTrack — Azure Deployment with Supabase PostgreSQL + Upstash Redis
 # ──────────────────────────────────────────────────────────────────────────────
 #
+# Architecture:
+#   Azure App Service (Docker) → Supabase (PostgreSQL) + Upstash (Redis)
+#
 # Prerequisites:
-#   1. Supabase project created → get connection string from Settings → Database
-#   2. Upstash Redis created → get REST URL and token from Upstash console
-#   3. Resend API key → get from resend.com/api-keys
-#   4. Google OAuth Client ID → Google Cloud Console → APIs & Services → Credentials
+#   1. Supabase project → Settings → Database → Connection string
+#   2. Upstash Redis → REST URL + Token
+#   3. Resend API key → resend.com/api-keys
+#   4. Google OAuth Client ID → console.cloud.google.com
+#   5. Azure CLI login → az login
 #
 # Usage:
 #   cd terraform
 #   terraform init
+#   cp variables.tfvars.example terraform.tfvars
+#   # Edit terraform.tfvars with your values
 #   terraform plan
 #   terraform apply
 # ──────────────────────────────────────────────────────────────────────────────
@@ -25,7 +31,7 @@ terraform {
     }
   }
 
-  # Optional: store state in Azure Storage
+  # Optional: store state in Azure Storage (recommended for team use)
   # backend "azurerm" {
   #   resource_group_name  = "bustrack-terraform-state"
   #   storage_account_name = "bustracktfstate"
@@ -59,13 +65,13 @@ variable "location" {
 }
 
 variable "app_service_sku" {
-  description = "App Service Plan SKU (B1 for dev, P1v2 for production)"
+  description = "App Service Plan SKU (B1=dev, P1v2=production)"
   type        = string
   default     = "B1"
 }
 
 variable "docker_image" {
-  description = "Docker image to deploy (e.g., youruser/bustrack:latest)"
+  description = "Docker image with tag (e.g., bustrack.azurecr.io/bustrack-api:latest)"
   type        = string
 }
 
@@ -123,25 +129,6 @@ variable "cors_origins" {
   default     = "*"
 }
 
-variable "docker_registry_url" {
-  description = "Docker registry URL (empty for Docker Hub)"
-  type        = string
-  default     = ""
-}
-
-variable "docker_registry_username" {
-  description = "Docker registry username"
-  type        = string
-  default     = ""
-}
-
-variable "docker_registry_password" {
-  description = "Docker registry password"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 # ── Locals ────────────────────────────────────────────────────────────────────
 
 locals {
@@ -159,6 +146,17 @@ resource "azurerm_resource_group" "main" {
   name     = "${local.name_prefix}-rg"
   location = var.location
   tags     = local.common_tags
+}
+
+# ── Azure Container Registry ─────────────────────────────────────────────────
+
+resource "azurerm_container_registry" "acr" {
+  name                = "${var.project_name}acr"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "Basic"
+  admin_enabled       = true
+  tags                = local.common_tags
 }
 
 # ── App Service Plan ─────────────────────────────────────────────────────────
@@ -185,16 +183,14 @@ resource "azurerm_linux_web_app" "api" {
     always_on     = var.app_service_sku != "F1"
     ftps_state    = "Disabled"
     http2_enabled = true
+    websockets_enabled = true
 
     application_stack {
       docker_image     = var.docker_image
-      docker_registry_url      = var.docker_registry_url != "" ? var.docker_registry_url : "https://index.docker.io"
-      docker_registry_username = var.docker_registry_username
-      docker_registry_password = var.docker_registry_password
+      docker_registry_url      = "https://${azurerm_container_registry.acr.login_server}"
+      docker_registry_username = azurerm_container_registry.acr.admin_username
+      docker_registry_password = azurerm_container_registry.acr.admin_password
     }
-
-    # Security headers at the App Service level
-    ip_restriction_default_action = "Allow"
 
     minimum_tls_version = "1.2"
   }
@@ -208,9 +204,9 @@ resource "azurerm_linux_web_app" "api" {
     REDIS_URL = "redis://default:${var.upstash_redis_token}@${replace(replace(var.upstash_redis_url, "https://", ""), "http://", "")}"
 
     # ── App ──
-    SECRET_KEY     = var.secret_key
-    APP_BASE_URL   = var.app_base_url
-    CORS_ORIGINS   = var.cors_origins
+    SECRET_KEY       = var.secret_key
+    APP_BASE_URL     = var.app_base_url
+    CORS_ORIGINS     = var.cors_origins
     FIREWALL_ENABLED = "true"
 
     # ── Google OAuth ──
@@ -241,6 +237,23 @@ output "app_service_url" {
 output "app_service_name" {
   description = "Name of the App Service"
   value       = azurerm_linux_web_app.api.name
+}
+
+output "acr_login_server" {
+  description = "ACR login server (for docker push)"
+  value       = azurerm_container_registry.acr.login_server
+}
+
+output "acr_admin_username" {
+  description = "ACR admin username"
+  value       = azurerm_container_registry.acr.admin_username
+  sensitive   = true
+}
+
+output "acr_admin_password" {
+  description = "ACR admin password"
+  value       = azurerm_container_registry.acr.admin_password
+  sensitive   = true
 }
 
 output "resource_group_name" {
