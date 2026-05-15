@@ -46,6 +46,10 @@ abcd.txt
 asyncio
 storage/
 delay_predictor.joblib
+openapi.json
+
+# ── Docs (generated) ──
+ANALYSIS_BUS_GPS.md
 
 # ── OS ──
 .DS_Store
