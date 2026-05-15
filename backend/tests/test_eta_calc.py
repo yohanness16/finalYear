@@ -14,12 +14,12 @@ def test_eta_heuristic_calculation():
     eta = calculate_eta_heuristic(9.02, 38.74, 9.03, 38.75, num_stops=1)
     assert eta > 100
 
-@patch("app.services.eta_engine.predict_delay")
+@patch("app.services.eta_engine.predict_eta_adjustment")
 @patch("app.services.eta_engine.get_settings")
 def test_eta_engine_ml_toggle(mock_settings, mock_predict):
     # Case 1: ML is disabled in settings
     mock_settings.return_value.USE_ML_FOR_PROD = False
-    mock_predict.return_value = 500.0
+    mock_predict.return_value = 120.0
     
     final, h_eta, mode = get_final_eta(9.0, 38.0, 9.1, 38.1)
     assert mode == "heuristic"
@@ -28,4 +28,4 @@ def test_eta_engine_ml_toggle(mock_settings, mock_predict):
     mock_settings.return_value.USE_ML_FOR_PROD = True
     final, h_eta, mode = get_final_eta(9.0, 38.0, 9.1, 38.1)
     assert mode == "ml"
-    assert final == 500.0
+    assert final == h_eta + 120.0
