@@ -14,6 +14,12 @@ GPS_PING_INTERVAL = 5           # seconds between GPS pings
 TRIP_DURATION_MINUTES = 30      # approx time per bus trip
 CONCURRENT_BUSES = 5            # how many buses drive simultaneously
 
+# ── ESP32 Image Simulation ─────────────────────────────────────
+ESP32_IMAGE_WIDTH = 640         # synthetic image width (optimal for HOG)
+ESP32_IMAGE_HEIGHT = 480        # synthetic image height
+ESP32_IMAGE_QUALITY = 85        # JPEG quality (0-100)
+ESP32_IMAGE_NOISE = 12          # sensor noise intensity (0-40)
+
 # ── Addis Ababa GPS Bounds ─────────────────────────────────────────────────────
 AA_CENTER = (9.0222, 38.7468)
 AA_BOUNDS = {
