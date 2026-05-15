@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     # Trust X-Forwarded-For from these proxy IPs (comma-separated)
     TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
 
+    # --- Email (Resend) ---
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "noreply@bustrack.et"
+    # Base URL of the frontend app (for verification/reset links)
+    APP_BASE_URL: str = "http://localhost:3000"
+
 
 @lru_cache
 def get_settings() -> Settings:
