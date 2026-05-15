@@ -32,6 +32,7 @@ class RouteStopSchema(BaseModel):
 
 class RouteBase(BaseModel):
     route_number: str
+    direction: str = "forward"
     name: Optional[str] = None
     origin: Optional[str] = None
     destination: Optional[str] = None
@@ -42,6 +43,7 @@ class RouteCreate(RouteBase):
 
 
 class RouteUpdate(BaseModel):
+    direction: Optional[str] = None
     name: Optional[str] = None
     origin: Optional[str] = None
     destination: Optional[str] = None

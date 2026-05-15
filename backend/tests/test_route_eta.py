@@ -16,6 +16,7 @@ def test_estimate_route_stop_eta_payloads_builds_per_stop_snapshots():
         speed_kmh=30.0,
         occupancy_level=2,
         route_number="12",
+        route_id=1,
         route_stops=stops,
     )
 

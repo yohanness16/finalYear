@@ -382,13 +382,19 @@ class PassengerSimulation:
         stops = route["stops"]
         start_index = random.randint(0, len(stops) - 2)
         end_index = random.randint(start_index + 1, len(stops) - 1)
+        if random.random() < 0.35:
+            start_index, end_index = end_index, start_index
         start_stop = stops[start_index]
         end_stop = stops[end_index]
         result = self.client.post(
-            "/search/point-to-point",
+            "/search/journey",
             {
-                "start_stop_id": start_stop["id"],
-                "end_stop_id": end_stop["id"],
+                "start_lat": start_stop["lat"],
+                "start_lon": start_stop["lon"],
+                "end_lat": end_stop["lat"],
+                "end_lon": end_stop["lon"],
+                "max_routes": 3,
+                "max_buses": 4,
             },
         )
         if not result:

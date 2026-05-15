@@ -30,7 +30,7 @@ const unsigned long HEARTBEAT_INTERVAL_MS = 10000;
 
 // If true, camera telemetry is still posted when GPS is not fresh.
 // This prevents image uploads from stalling while waiting for GPS lock.
-const bool ALLOW_SEND_WITHOUT_GPS = false;
+const bool ALLOW_SEND_WITHOUT_GPS = true;
 const float FALLBACK_LAT = 9.032000f;
 const float FALLBACK_LON = 38.752000f;
 
@@ -159,10 +159,45 @@ bool hasFreshFix() {
   if (!gps.location.isValid()) {
     return false;
   }
-  if (gps.location.age() > 10000) {
+  float lat = gps.location.lat();
+  float lon = gps.location.lng();
+  if (lat == 0.0f && lon == 0.0f) {
     return false;
   }
   return true;
+}
+
+bool selectGpsFix(float& lat, float& lon, float& speedKmph, bool& usingFallbackCoords) {
+  usingFallbackCoords = false;
+
+  if (hasFreshFix()) {
+    lat = gps.location.lat();
+    lon = gps.location.lng();
+    speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
+    hasLastKnownGps = true;
+    lastKnownLat = lat;
+    lastKnownLon = lon;
+    return true;
+  }
+
+  if (hasLastKnownGps) {
+    lat = lastKnownLat;
+    lon = lastKnownLon;
+    speedKmph = 0.0f;
+    Serial.println("No fresh GPS fix. Sending last known GPS coordinates.");
+    return true;
+  }
+
+  if (ALLOW_SEND_WITHOUT_GPS) {
+    lat = FALLBACK_LAT;
+    lon = FALLBACK_LON;
+    speedKmph = 0.0f;
+    usingFallbackCoords = true;
+    Serial.println("No GPS fix yet. Sending fallback coordinates.");
+    return true;
+  }
+
+  return false;
 }
 
 bool pingServerStatus(
@@ -337,7 +372,12 @@ void setup() {
   connectWiFi();
 
   // Startup ping to backend before waiting for GPS fix.
-  bool startupPing = pingServerStatus("boot", false, cameraHealthy, false, 0.0f, 0.0f, 0.0f);
+  float startupLat = 0.0f;
+  float startupLon = 0.0f;
+  float startupSpeed = 0.0f;
+  bool startupFallback = false;
+  bool startupHasLocation = selectGpsFix(startupLat, startupLon, startupSpeed, startupFallback);
+  bool startupPing = pingServerStatus("boot", startupHasLocation, cameraHealthy, false, startupLat, startupLon, startupSpeed);
   Serial.print("Startup ping: ");
   Serial.println(startupPing ? "OK" : "FAILED");
 }
@@ -361,13 +401,15 @@ void loop() {
   if (now - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
     lastHeartbeatMs = now;
 
-    float hbLat = gpsValidNow ? gps.location.lat() : 0.0f;
-    float hbLon = gpsValidNow ? gps.location.lng() : 0.0f;
-    float hbSpeed = (gpsValidNow && gps.speed.isValid()) ? gps.speed.kmph() : 0.0f;
+    float hbLat = 0.0f;
+    float hbLon = 0.0f;
+    float hbSpeed = 0.0f;
+    bool heartbeatFallback = false;
+    bool heartbeatHasLocation = selectGpsFix(hbLat, hbLon, hbSpeed, heartbeatFallback);
 
     bool heartbeatOk = pingServerStatus(
       "heartbeat",
-      gpsValidNow,
+      heartbeatHasLocation,
       cameraHealthy,
       lastTelemetryOk,
       hbLat,
@@ -391,22 +433,7 @@ void loop() {
   float speedKmph = 0.0f;
   bool usingFallbackCoords = false;
 
-  if (gpsValidNow) {
-    lat = gps.location.lat();
-    lon = gps.location.lng();
-    speedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0f;
-  } else if (ALLOW_SEND_WITHOUT_GPS) {
-    if (hasLastKnownGps) {
-      lat = lastKnownLat;
-      lon = lastKnownLon;
-    } else {
-      lat = FALLBACK_LAT;
-      lon = FALLBACK_LON;
-    }
-    speedKmph = 0.0f;
-    usingFallbackCoords = true;
-    Serial.println("No fresh GPS fix. Sending camera frame with fallback coordinates.");
-  } else {
+  if (!selectGpsFix(lat, lon, speedKmph, usingFallbackCoords)) {
     lastTelemetryOk = false;
     Serial.println("No fresh GPS fix yet, waiting...");
     Serial.print("Telemetry state | sent=NO_GPS | attempts=");

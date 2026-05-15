@@ -55,12 +55,16 @@ async def create_route(
     db: AsyncSession = Depends(get_db),
    
 ):
-    if await crud_route.get_route_by_number(db, route.route_number):
-        raise HTTPException(400, "Route number already exists")
+    direction = (route.direction or "forward").strip().lower()
+    if direction not in {"forward", "reverse"}:
+        raise HTTPException(400, "Direction must be 'forward' or 'reverse'")
+    if await crud_route.get_route_by_number(db, route.route_number, direction):
+        raise HTTPException(400, "Route number already exists for this direction")
     stop_sequence = [(s.stop_id, s.sequence_order) for s in route.stops] if route.stops else None
     return await crud_route.create_route(
         db,
         route.route_number,
+        direction,
         route.name,
         route.origin,
         route.destination,
@@ -82,6 +86,7 @@ async def get_route(route_id: int, db: AsyncSession = Depends(get_db)):
     return RouteWithStops(
         id=r.id,
         route_number=r.route_number,
+        direction=r.direction,
         name=r.name,
         origin=r.origin,
         destination=r.destination,

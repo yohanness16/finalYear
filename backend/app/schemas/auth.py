@@ -45,3 +45,46 @@ class AdminUpdateUserRequest(BaseModel):
     email: EmailStr
     password: str | None = Field(default=None, min_length=8, max_length=100)
     role: str = Field(..., pattern="^(driver|admin)$")
+
+
+class DriverLoginRequest(BaseModel):
+    """Driver login bound to a specific bus/device context."""
+
+    username: str
+    password: str
+    device_id: str
+    bus_token: str
+
+
+class DriverLoginResponse(BaseModel):
+    """Driver token and active bus-session metadata."""
+
+    access_token: str
+    token_type: str = "bearer"
+    session_id: int
+    driver_id: int
+    vehicle_id: int
+    device_id: str
+
+
+class DriverLogoutRequest(BaseModel):
+    """Close an active driver bus session."""
+
+    session_id: int
+
+
+class BusDashboardLoginRequest(BaseModel):
+    """Authenticate a bus dashboard device."""
+
+    vehicle_id: int
+    device_id: str
+    password: str
+
+
+class BusDashboardLoginResponse(BaseModel):
+    """Short-lived token for a specific bus dashboard."""
+
+    access_token: str
+    token_type: str = "bearer"
+    vehicle_id: int
+    device_id: str

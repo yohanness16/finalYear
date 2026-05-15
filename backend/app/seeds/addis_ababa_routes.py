@@ -48,14 +48,19 @@ ADDIS_ABABA_ROUTES_SEED = [
 async def seed_addis_ababa_routes(db: AsyncSession) -> None:
     """Seed routes, stops, and route-stop links if not already present."""
     for item in ADDIS_ABABA_ROUTES_SEED:
+        direction = "forward"
         route = (
             await db.execute(
-                select(Route).where(Route.route_number == item["route_number"])
+                select(Route).where(
+                    Route.route_number == item["route_number"],
+                    Route.direction == direction,
+                )
             )
         ).scalar_one_or_none()
         if not route:
             route = Route(
                 route_number=item["route_number"],
+                direction=direction,
                 name=item["name"],
                 origin=item["origin"],
                 destination=item["destination"],

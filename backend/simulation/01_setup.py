@@ -170,6 +170,7 @@ def setup_routes(admin: APIClient) -> dict:
 
         payload = {
             "route_number": r["route_number"],
+            "direction": "forward",
             "name": r["name"],
             "origin": r["origin"],
             "destination": r["destination"],
@@ -189,7 +190,7 @@ def setup_routes(admin: APIClient) -> dict:
             existing_routes = admin.get("/routes?skip=0&limit=100")
             if existing_routes and isinstance(existing_routes, list):
                 for er in existing_routes:
-                    if er.get("route_number") == r["route_number"]:
+                    if er.get("route_number") == r["route_number"] and er.get("direction") == "forward":
                         route_map[r["route_number"]] = {
                             "route": er,
                             "stops": [{"name": s["name"], "id": stop_map.get(s["name"]), **s} for s in r["stops"]],

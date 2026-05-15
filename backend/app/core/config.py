@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     BUS_LIVE_TTL: int = 600  # 10 min
     ROUTE_STOP_TTL: int = 300  # 5 min
 
+    # Live position age cutoff (seconds)
+    LIVE_POSITION_MAX_AGE_SECONDS: int = 180
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -29,4 +29,5 @@ class Vehicle(Base):
 
     assignments = relationship("Assignment", back_populates="vehicle")
     raw_telemetry = relationship("RawTelemetry", back_populates="vehicle")
+    driver_sessions = relationship("DriverBusSession", back_populates="vehicle")
     route = relationship("Route", back_populates="vehicles")

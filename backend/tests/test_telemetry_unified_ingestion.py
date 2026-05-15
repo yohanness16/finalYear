@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal
 from app.main import app
@@ -46,3 +47,34 @@ async def test_vehicles_telemetry_uses_unified_ingestion_and_returns_occupancy()
     assert body["vehicle_id"] > 0
     assert body["occupancy_level"] == 2
     assert "route_checked" in body
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_vehicles_telemetry_auto_registers_unknown_device():
+    unique = uuid.uuid4().hex[:8]
+    device_id = f"UNIFIED_AUTO_{unique}"
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/vehicles/telemetry",
+            json={
+                "device_id": device_id,
+                "lat": 9.055,
+                "lon": 38.788,
+                "speed": 14.4,
+                "pixel_count": 500,
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "received"
+        assert body["vehicle_id"] > 0
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Vehicle).where(Vehicle.device_id == device_id))
+        created = result.scalar_one_or_none()
+        assert created is not None
+        assert created.plate_number.startswith("ESP-")

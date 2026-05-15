@@ -25,8 +25,15 @@ async def get_route_by_id(db: AsyncSession, route_id: int) -> Route | None:
     return result.scalar_one_or_none()
 
 
-async def get_route_by_number(db: AsyncSession, route_number: str) -> Route | None:
-    result = await db.execute(select(Route).where(Route.route_number == route_number))
+async def get_route_by_number(
+    db: AsyncSession,
+    route_number: str,
+    direction: str | None = None,
+) -> Route | None:
+    stmt = select(Route).where(Route.route_number == route_number)
+    if direction:
+        stmt = stmt.where(Route.direction == direction)
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -67,7 +74,7 @@ async def get_nearest_stops(
 
 
 async def get_routes_through_stops(db: AsyncSession, start_stop_id: int, end_stop_id: int) -> list[Route]:
-    """Find routes where start comes before end in sequence."""
+    """Find routes containing both stops in either order."""
     result = await db.execute(
         select(Route)
         .join(RouteStop, Route.id == RouteStop.route_id)
@@ -76,25 +83,33 @@ async def get_routes_through_stops(db: AsyncSession, start_stop_id: int, end_sto
         .distinct()
     )
     routes = list(result.scalars().unique().all())
-    # Filter: start must come before end
+    # Filter: route must contain both stops
     valid = []
     for r in routes:
         stops_order = {rs.stop_id: rs.sequence_order for rs in r.route_stops}
         if start_stop_id in stops_order and end_stop_id in stops_order:
-            if stops_order[start_stop_id] < stops_order[end_stop_id]:
-                valid.append(r)
+            if start_stop_id == end_stop_id:
+                continue
+            valid.append(r)
     return valid
 
 
 async def create_route(
     db: AsyncSession,
     route_number: str,
+    direction: str = "forward",
     name: str | None = None,
     origin: str | None = None,
     destination: str | None = None,
     stop_sequence: list[tuple[int, int]] | None = None,
 ) -> Route:
-    route = Route(route_number=route_number, name=name, origin=origin, destination=destination)
+    route = Route(
+        route_number=route_number,
+        direction=direction,
+        name=name,
+        origin=origin,
+        destination=destination,
+    )
     db.add(route)
     await db.flush()
     if stop_sequence:

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
-from app.services.cv_engine import count_people_from_image, estimate_density_from_people_count
+from app.services.cv_engine import analyze_bus_density_from_image, estimate_density_from_people_count
 from app.services.live_broadcast import broadcast_vehicle_position
 from app.services.redis_cache import set_bus_live_pipeline
 
@@ -133,15 +133,16 @@ async def receive_esp32_telemetry(
         return {"status": "rejected", "reason": str(exc)}
 
     image_bytes = await image.read()
-    people_count = count_people_from_image(image_bytes)
+    analysis = analyze_bus_density_from_image(image_bytes, bus_capacity or None)
+    people_count = int(analysis["people_count"])
     if (vehicle.capacity is None or vehicle.capacity <= 0) and bus_capacity > 0:
         vehicle.capacity = bus_capacity
         await db.flush()
 
-    occupancy_level = _occupancy_from_people_count(
-        people_count,
-        bus_capacity or vehicle.capacity,
-    )
+    occupancy_level = int(analysis["crowd_density"])
+    capacity_for_analysis = bus_capacity or vehicle.capacity
+    if occupancy_level == 0 and people_count > 0:
+        occupancy_level = _occupancy_from_people_count(people_count, capacity_for_analysis)
 
     image_saved = False
     image_path = ""
@@ -166,6 +167,9 @@ async def receive_esp32_telemetry(
             "people_count": people_count,
             "crowd_density": occupancy_level,
             "is_crowded": occupancy_level == 2,
+            "method": analysis["method"],
+            "confidence": analysis["confidence"],
+            "foreground_ratio": analysis["foreground_ratio"],
         },
     }
 
@@ -219,5 +223,8 @@ async def receive_esp32_telemetry(
             "people_count": people_count,
             "crowd_density": occupancy_level,
             "is_crowded": occupancy_level == 2,
+            "method": analysis["method"],
+            "confidence": analysis["confidence"],
+            "foreground_ratio": analysis["foreground_ratio"],
         },
     }

@@ -12,8 +12,13 @@ def test_model_health_checks(mock_path):
     assert model_loaded() is False
     assert get_model_version() is None
 
-def test_predict_delay_no_model():
+@patch("app.services.ai_predictor._model_path")
+def test_predict_delay_no_model(mock_path):
     # Should return None gracefully if model isn't loaded
+    mock_path.exists.return_value = False
+    import app.services.ai_predictor
+
+    app.services.ai_predictor._model = None
     result = predict_delay(stop_id=1, occupancy_level=1)
     assert result is None
 

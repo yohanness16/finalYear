@@ -1,8 +1,9 @@
 """Vehicle, telemetry, and position endpoints."""
 
+import re
 import time
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import RequireAdmin
@@ -21,6 +22,12 @@ from app.schemas.vehicle import (
 )
 
 router = APIRouter(tags=["vehicles"])
+
+
+def _default_plate_from_device_id(device_id: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", device_id).upper()
+    tail = (cleaned[-8:] if cleaned else "BUS00001")
+    return f"ESP-{tail}"[:20]
 
 
 def _vehicle_to_response(v: Vehicle) -> VehicleResponse:
@@ -114,13 +121,19 @@ async def admin_update_vehicle(
 @router.post("/vehicles/telemetry")
 async def receive_telemetry(
     data: TelemetryInput,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Receive GPS telemetry and update vehicle position."""
     vehicle = await crud_vehicle.get_vehicle_by_device_id(db, data.device_id)
     if not vehicle:
-        raise HTTPException(404, "Vehicle not registered")
+        vehicle = await crud_vehicle.create_vehicle(
+            db,
+            plate_number=_default_plate_from_device_id(data.device_id),
+            device_id=data.device_id,
+            bus_type="ESP32-CAM",
+            capacity=None,
+            is_active=True,
+        )
 
     occupancy_level = 0
     if data.pixel_count is not None:
@@ -143,8 +156,8 @@ async def receive_telemetry(
         ts,
     )
 
-    background_tasks.add_task(
-        _save_raw_telemetry,
+    await _save_raw_telemetry(
+        db,
         vehicle.id,
         data.lat,
         data.lon,
@@ -161,18 +174,16 @@ async def receive_telemetry(
 
 
 async def _save_raw_telemetry(
+    db: AsyncSession,
     vehicle_id: int,
     lat: float,
     lon: float,
     pixel_count: int | None,
     raw_payload: dict | None,
 ):
-    from app.db.session import AsyncSessionLocal
     from app.crud import tracking as crud_tracking
 
-    async with AsyncSessionLocal() as db:
-        await crud_tracking.create_raw_telemetry(
-            db, vehicle_id, lat, lon, pixel_count, raw_payload
-        )
-        await db.commit()
+    await crud_tracking.create_raw_telemetry(
+        db, vehicle_id, lat, lon, pixel_count, raw_payload
+    )
 

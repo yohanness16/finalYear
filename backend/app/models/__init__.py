@@ -12,6 +12,7 @@ from app.models.favorite import Favorite
 from app.models.rating import Rating
 from app.models.notification_setting import NotificationSetting
 from app.models.system_settings import SystemSettings
+from app.models.driver_bus_session import DriverBusSession
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "Rating",
     "NotificationSetting",
     "SystemSettings",
+    "DriverBusSession",
 ]

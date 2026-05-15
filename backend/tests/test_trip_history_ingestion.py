@@ -27,6 +27,7 @@ async def _make_driver_vehicle_route(db_session: AsyncSession):
     )
     route = Route(
         route_number=f"R{suffix}",
+        direction="forward",
         name=f"Route {suffix}",
         origin="Origin",
         destination="Destination",

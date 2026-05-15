@@ -16,7 +16,7 @@ def haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> floa
     )
     return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-
+# sin2(dphi/2) + c(phi1)*c(phi2).sin2(dlambda/2 )
 def get_time_multiplier() -> float:
     """Peak hour multiplier: morning 7-9:30, evening 16:30-19:30."""
     now = datetime.now().time()

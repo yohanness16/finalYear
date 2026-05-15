@@ -1,41 +1,34 @@
-# Migration: Add last_lat, last_lon, speed to vehicles table.
+"""add position fields to vehicles
 
-import { MigrationInterface, QueryRunner } from 'typeorm';
+Revision ID: 20251010000001
+Revises: 7fc9e171596d
+Create Date: 2026-05-15 10:10:00.000000
 
-export class AddPositionFields1735680000000 implements MigrationInterface {
-  name = 'AddPositionFields1735680000000';
+"""
+from typing import Sequence, Union
 
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.startTransaction();
-    try {
-      // Add position fields with NOT NULL constraints and default values
-      // to ensure existing rows have valid data
-      await queryRunner.query(`ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "last_lat" double precision NOT NULL DEFAULT 0`);
-      await queryRunner.query(`ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "last_lon" double precision NOT NULL DEFAULT 0`);
-      await queryRunner.query(`ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "speed" double precision NOT NULL DEFAULT 0`);
+from alembic import op
+import sqlalchemy as sa
 
-      // Consider adding indexes if these fields will be frequently queried:
-      // await queryRunner.query(`CREATE INDEX "vehicles_last_lat_idx" ON "vehicles" ("last_lat")`);
-      // await queryRunner.query(`CREATE INDEX "vehicles_last_lon_idx" ON "vehicles" ("last_lon")`);
-      // await queryRunner.query(`CREATE INDEX "vehicles_speed_idx" ON "vehicles" ("speed")`);
 
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    }
-  }
+# revision identifiers, used by Alembic.
+revision: str = "20251010000001"
+down_revision: Union[str, Sequence[str], None] = "7fc9e171596d"
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.startTransaction();
-    try {
-      await queryRunner.query(`ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "speed"`);
-      await queryRunner.query(`ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "last_lon"`);
-      await queryRunner.query(`ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "last_lat"`);
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    }
-  }
-}
+
+def upgrade() -> None:
+    """Upgrade schema."""
+    op.execute('ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "last_lat" DOUBLE PRECISION')
+    op.execute('ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "last_lon" DOUBLE PRECISION')
+    op.execute('ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "speed" DOUBLE PRECISION')
+    op.execute('ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "position_updated_at" TIMESTAMP WITH TIME ZONE')
+
+
+def downgrade() -> None:
+    """Downgrade schema."""
+    op.execute('ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "position_updated_at"')
+    op.execute('ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "speed"')
+    op.execute('ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "last_lon"')
+    op.execute('ALTER TABLE "vehicles" DROP COLUMN IF EXISTS "last_lat"')

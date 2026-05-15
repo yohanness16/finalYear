@@ -85,7 +85,7 @@ curl -X POST http://localhost:8000/api/v1/gateway/esp32/telemetry \
 
 What the endpoint does:
 
-The image is analyzed locally, a simple crowd count is derived from the frame, occupancy is estimated from that count and the bus capacity, the vehicle location is updated, and the raw reading is stored asynchronously.
+The image is analyzed locally using the hybrid CV pipeline described in [CV_DENSITY.md](CV_DENSITY.md). The backend derives both an estimated people count and a coarse occupancy level, stores the raw reading, updates the vehicle location, and broadcasts the live bus state.
 
 ## 4. Live dashboard stream
 

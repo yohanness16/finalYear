@@ -56,7 +56,7 @@ class PassengerSimulator:
         return False
 
     def search_route(self):
-        """Search for a point-to-point route."""
+        """Search for a journey using start/end coordinates."""
         routes = self.routes
         if len(routes) < 1:
             return
@@ -68,16 +68,25 @@ class PassengerSimulator:
         # Pick random start and end stops
         idx_a = random.randint(0, len(stops) - 2)
         idx_b = random.randint(idx_a + 1, len(stops) - 1)
+        if random.random() < 0.35:
+            idx_a, idx_b = idx_b, idx_a
         stop_a = stops[idx_a]
         stop_b = stops[idx_b]
 
         if not stop_a.get("id") or not stop_b.get("id"):
             return
 
-        result = self.client.post("/search/point-to-point", {
-            "start_stop_id": stop_a["id"],
-            "end_stop_id": stop_b["id"],
-        })
+        result = self.client.post(
+            "/search/journey",
+            {
+                "start_lat": stop_a["lat"],
+                "start_lon": stop_a["lon"],
+                "end_lat": stop_b["lat"],
+                "end_lon": stop_b["lon"],
+                "max_routes": 3,
+                "max_buses": 4,
+            },
+        )
         if result:
             count = len(result.get("routes", []))
             self.log(f"🔍 Searched {stop_a['name']} → {stop_b['name']} → {count} routes found")
