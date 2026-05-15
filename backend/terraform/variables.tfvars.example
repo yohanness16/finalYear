@@ -22,8 +22,9 @@ docker_image = "bustrackacr.azurecr.io/bustrack-api:latest"
 supabase_db_url = "postgresql+asyncpg://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres"
 
 # ── Upstash Redis ──
-# Get from Upstash Console → Your Redis → REST API
-upstash_redis_url   = "https://xxx-xxx-xxx.upstash.io"
+# Get from Upstash Console → Your Redis → Details
+# Host: xxx-xxx-xxx.upstash.io  (just the hostname, no https://)
+upstash_redis_host  = "xxx-xxx-xxx.upstash.io"
 upstash_redis_token = "YOUR_UPSTASH_REST_TOKEN"
 
 # ── Resend ──

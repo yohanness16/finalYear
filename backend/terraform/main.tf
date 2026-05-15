@@ -81,10 +81,9 @@ variable "supabase_db_url" {
   sensitive   = true
 }
 
-variable "upstash_redis_url" {
-  description = "Upstash Redis REST URL (https://...upstash.io)"
+variable "upstash_redis_host" {
+  description = "Upstash Redis host (e.g., xxx-xxx-xxx.upstash.io)"
   type        = string
-  sensitive   = true
 }
 
 variable "upstash_redis_token" {
@@ -200,8 +199,8 @@ resource "azurerm_linux_web_app" "api" {
     # ── Database (Supabase) ──
     DATABASE_URL = var.supabase_db_url
 
-    # ── Redis (Upstash) ──
-    REDIS_URL = "redis://default:${var.upstash_redis_token}@${replace(replace(var.upstash_redis_url, "https://", ""), "http://", "")}"
+    # ── Redis (Upstash TLS) ──
+    REDIS_URL = "rediss://default:${var.upstash_redis_token}@${var.upstash_redis_host}:6379"
 
     # ── App ──
     SECRET_KEY       = var.secret_key
