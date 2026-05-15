@@ -134,13 +134,14 @@ async def receive_telemetry(
 
     ts = datetime.now(timezone.utc).timestamp()
     await broadcast_vehicle_position(
-        vehicle.id,
-        vehicle.plate_number,
-        data.lat,
-        data.lon,
-        data.speed or 0.0,
-        vehicle.route_id,
-        ts,
+        vehicle_id=vehicle.id,
+        plate_number=vehicle.plate_number,
+        lat=data.lat,
+        lon=data.lon,
+        speed=data.speed or 0.0,
+        route_id=vehicle.route_id,
+        timestamp=ts,
+        occupancy_level=occupancy,
     )
 
     return {
