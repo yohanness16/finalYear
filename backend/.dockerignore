@@ -1,9 +1,9 @@
-# Git
+# ── Git ──
 .git
 .github
 .gitignore
 
-# Python
+# ── Python ──
 __pycache__
 *.pyc
 *.pyo
@@ -13,37 +13,57 @@ build
 env
 venv
 .venv
+*.egg
 
-# IDE
+# ── IDE ──
 .marscode
 .sixth
 .vscode
 .idea
+*.swp
+*.swo
 
-# Testing & Coverage
+# ── Testing & Coverage ──
 .coverage
 htmlcov
 .pytest_cache
 test-results.xml
+tests/
+pytest.ini
+conftest.py
 
-# Docs
+# ── Simulation ──
+simulation/
+
+# ── Docs ──
 docs/
 *.md
 LICENSE
+terraform/
 
-# Simulation
-simulation/
-
-# Local env files
+# ── Local env files ──
 .env
 .env.local
 .env.*.local
+.env.example
 
-# OS
+# ── OS ──
 .DS_Store
 Thumbs.db
 
-# Misc
+# ── ML artifacts ──
+*.joblib
+*.pkl
+ml_reports/
+delay_predictor.joblib
+
+# ── Local data ──
 abcd.txt
 asyncio
-ml_reports
+storage/esp32_images/
+storage/firewall_blocklist.txt
+
+# ── Misc ──
+*.log
+.gitattributes
+.editorconfig
