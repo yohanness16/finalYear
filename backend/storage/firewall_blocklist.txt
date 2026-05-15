@@ -1,0 +1,7 @@
+# Smart Transport API — IP Blocklist
+# Format: IP|CIDR # reason | timestamp | [temp]
+# Lines starting with # are ignored
+#
+# Examples:
+# 203.0.113.50 # brute_force | 2025-01-15T10:30:00
+# 198.51.100.0/24 | scanner | 2025-01-15T11:00:00 | temp
