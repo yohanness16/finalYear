@@ -1,26 +1,101 @@
-version: "3.8"
+# ──────────────────────────────────────────────────────────────────────────────
+# BusTrack — Docker Compose
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Local development:
+#   docker compose up -d                    # start all services
+#   docker compose logs -f api              # follow API logs
+#   docker compose down                     # stop all
+#
+# Production (uses pre-built image):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ──────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
 
 services:
+  # ── FastAPI Application ────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bustrack-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/transport_db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - FIREWALL_ENABLED=${FIREWALL_ENABLED:-true}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-noreply@bustrack.et}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:3000}
+      - TRUSTED_PROXY_IPS=*
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - esp32_storage:/app/storage/esp32_images
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bustrack-net
+
+  # ── PostgreSQL (local development only — use Supabase in production) ──────
   postgres:
     image: postgis/postgis:15-3.4
-    container_name: postgres
+    container_name: bustrack-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yohannes
-      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: transport_db
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transport_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bustrack-net
 
+  # ── Redis (local development only — use Upstash in production) ────────────
   redis:
     image: redis:7-alpine
-    container_name: FYP
+    container_name: bustrack-redis
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bustrack-net
 
 volumes:
   postgres_data:
   redis_data:
+  esp32_storage:
+
+networks:
+  bustrack-net:
+    driver: bridge
