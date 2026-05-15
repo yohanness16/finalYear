@@ -48,6 +48,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.get("/health", tags=["health"])
+async def health_check():
+    """Health check endpoint for Azure App Service and load balancers."""
+    from app.utils.redis_client import get_redis
+    from app.db.session import engine
+
+    health = {"status": "healthy", "version": "1.0.0"}
+
+    # Check database
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+        health["database"] = "connected"
+    except Exception as e:
+        health["database"] = f"error: {type(e).__name__}"
+        health["status"] = "degraded"
+
+    # Check Redis
+    try:
+        r = await get_redis()
+        await r.ping()
+        health["redis"] = "connected"
+    except Exception as e:
+        health["redis"] = f"error: {type(e).__name__}"
+        health["status"] = "degraded"
+
+    status_code = 200 if health["status"] == "healthy" else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=health, status_code=status_code)
+
 # ── Middleware stack (order matters: last added = first executed) ──
 
 # 4. CORS — outermost layer, handles preflight
