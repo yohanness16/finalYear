@@ -8,7 +8,16 @@ import redis.asyncio as redis
 from app.core.config import get_settings
 
 _settings = get_settings()
-redis_cache = redis.from_url(_settings.REDIS_URL, decode_responses=True)
+
+def _build_redis_kwargs(url: str) -> dict:
+    kwargs: dict = {"decode_responses": True}
+    if url.startswith("rediss://"):
+        import ssl
+        kwargs["ssl"] = True
+        kwargs["ssl_cert_reqs"] = "none"
+    return kwargs
+
+redis_cache = redis.from_url(_settings.REDIS_URL, **_build_redis_kwargs(_settings.REDIS_URL))
 
 COORD_HISTORY_MAX = 5
 HIST_KEY = "veh:hist:{plate}"
