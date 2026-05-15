@@ -4,9 +4,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.api.v1 import (
     auth,
@@ -24,9 +21,15 @@ from app.api.v1 import (
     favorites,
     notifications,
 )
+from app.core.config import get_settings
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.firewall import FirewallMiddleware
+from app.middleware.request_validator import RequestValidationMiddleware
 from app.utils.redis_client import close_redis
 from app.services.redis_cache import close_redis_cache
-from app.middleware.security_headers import SecurityHeadersMiddleware
+
+
+settings = get_settings()
 
 
 @asynccontextmanager
@@ -43,18 +46,30 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SecurityHeadersMiddleware)
+
+# ── Middleware stack (order matters: last added = first executed) ──
+
+# 4. CORS — outermost layer, handles preflight
+cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# 3. Security headers — adds HSTS, CSP, etc. to every response
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Request validation — body size, content-type, method checks
+app.add_middleware(RequestValidationMiddleware)
+
+# 1. Firewall — IP blocklisting, anomaly scoring (innermost, closest to handler)
+if settings.FIREWALL_ENABLED:
+    app.add_middleware(FirewallMiddleware)
+
+# ── API Routers ──
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(admin_users.router, prefix="/api/v1", tags=["admin"])
 app.include_router(admin_dashboard.router, prefix="/api/v1", tags=["admin"])
