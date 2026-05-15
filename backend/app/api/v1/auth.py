@@ -1,4 +1,4 @@
-"""Authentication endpoints: register, login, Google OAuth."""
+"""Authentication endpoints: register, login, Google OAuth, email verification, password reset."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError, jwt
@@ -19,12 +19,23 @@ from app.schemas.auth import (
     DriverLoginRequest,
     DriverLoginResponse,
     DriverLogoutRequest,
+    ForgotPasswordRequest,
     GoogleAuthRequest,
     LoginRequest,
     RegisterRequest,
+    ResendVerificationRequest,
+    ResetPasswordRequest,
     TokenResponse,
+    VerifyEmailRequest,
 )
 from app.schemas.user import UserResponse
+from app.services.email_service import send_password_reset_email, send_verification_email
+from app.services.token_service import (
+    consume_email_verify_token,
+    consume_password_reset_token,
+    create_email_verify_token,
+    create_password_reset_token,
+)
 
 router = APIRouter()
 # In app/api/v1/auth.py
@@ -34,15 +45,19 @@ settings = get_settings()
 @router.post("/auth/register", response_model=UserResponse)
 @limiter.limit("10/minute")
 async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    """Passenger signup with email and password."""
+    """Passenger signup with email and password. Sends verification email."""
     if await crud_user.get_user_by_username(db, body.username):
         raise HTTPException(status_code=400, detail="Username already registered")
     if await crud_user.get_user_by_email(db, body.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     password_hash = pwd_context.hash(body.password)
     user = await crud_user.create_user(
-        db, body.username, body.email, password_hash=password_hash, role="passenger"
+        db, body.username, body.email, password_hash=password_hash, role="passenger",
+        is_verified=False,
     )
+    # Send verification email (non-blocking failure)
+    token = await create_email_verify_token(user.id)
+    await send_verification_email(user.email, user.username, token)
     return user
 
 
@@ -211,3 +226,61 @@ async def bus_dashboard_login(
         vehicle_id=vehicle.id,
         device_id=vehicle.device_id,
     )
+
+
+@router.post("/auth/verify-email")
+@limiter.limit("10/minute")
+async def verify_email(request: Request, body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+    """Verify email address using token from email link."""
+    user_id = await consume_email_verify_token(body.token)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    user = await crud_user.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_verified:
+        return {"status": "already_verified"}
+    await crud_user.update_user(db, user_id, is_verified=True)
+    return {"status": "verified"}
+
+
+@router.post("/auth/resend-verification")
+@limiter.limit("5/minute")
+async def resend_verification(request: Request, body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
+    """Resend verification email to an unverified user."""
+    user = await crud_user.get_user_by_email(db, body.email)
+    if not user:
+        # Don't reveal whether email exists
+        return {"status": "sent"}
+    if user.is_verified:
+        return {"status": "already_verified"}
+    token = await create_email_verify_token(user.id)
+    await send_verification_email(user.email, user.username, token)
+    return {"status": "sent"}
+
+
+@router.post("/auth/forgot-password")
+@limiter.limit("5/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send password reset email. Always returns success to prevent email enumeration."""
+    user = await crud_user.get_user_by_email(db, body.email)
+    if user and user.password_hash:
+        token = await create_password_reset_token(user.id)
+        await send_password_reset_email(user.email, user.username, token)
+    # Always return success to prevent email enumeration
+    return {"status": "sent"}
+
+
+@router.post("/auth/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using token from email link."""
+    user_id = await consume_password_reset_token(body.token)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user = await crud_user.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    new_hash = pwd_context.hash(body.new_password)
+    await crud_user.update_user(db, user_id, password_hash=new_hash)
+    return {"status": "reset"}
