@@ -1,0 +1,44 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# BusTrack — Production Docker Compose Override
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This override:
+#   - Removes local Postgres/Redis (use Supabase/Upstash instead)
+#   - Adds resource limits
+#   - Enables log rotation
+#   - Uses image instead of build
+# ──────────────────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  api:
+    image: ${DOCKER_IMAGE:-bustrack-api:latest}
+    build: null  # Don't build in production, use pre-built image
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  # Disable local Postgres in production (use Supabase)
+  postgres:
+    profiles:
+      - disabled
+
+  # Disable local Redis in production (use Upstash)
+  redis:
+    profiles:
+      - disabled
