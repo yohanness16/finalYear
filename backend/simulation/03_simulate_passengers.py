@@ -136,6 +136,25 @@ class PassengerSimulator:
         if result:
             self.log(f"🔔 Set notification: Route {route['route_number']}, {lead_time}min lead")
 
+    def check_crowd(self):
+        """Check crowd density for a vehicle (passenger checking before boarding)."""
+        try:
+            vehicles = self.client.get("/vehicles?skip=0&limit=20") or []
+            if vehicles:
+                vehicle = random.choice(vehicles)
+                plate = vehicle.get("plate_number")
+                if plate:
+                    cv = self.client.get(f"/admin/crowd/{plate}")
+                    if cv:
+                        density = cv.get("cv", {}).get("crowd_density", 0)
+                        people = cv.get("cv", {}).get("people_count", 0)
+                        density_label = ["empty", "medium", "crowded"][min(density, 2)]
+                        self.log(f"👥 {plate}: {density_label} ({people} people)")
+                    else:
+                        self.log(f"👥 {plate}: no CV data yet")
+        except Exception:
+            pass
+
     def rate_journey(self, assignment_id: int = None):
         """Rate a journey."""
         if not self.user_id:
@@ -178,12 +197,13 @@ class PassengerSimulator:
 
         # Define passenger action weights (realistic behavior)
         actions = [
-            (self.search_route,       35),  # Search most common
-            (self.view_routes,        20),  # Browse routes
-            (self.view_stops,         10),  # Look at stops
-            (self.save_favorite,      10),  # Save favorites
-            (self.view_favorites,      8),  # View saved routes
-            (self.set_notification,    7),  # Set notifications
+            (self.search_route,       30),  # Search most common
+            (self.view_routes,        15),  # Browse routes
+            (self.view_stops,          8),  # Look at stops
+            (self.check_crowd,        12),  # Check crowd density before boarding
+            (self.save_favorite,       8),  # Save favorites
+            (self.view_favorites,      7),  # View saved routes
+            (self.set_notification,    5),  # Set notifications
             (self.rate_journey,       10),  # Rate trips
         ]
 
