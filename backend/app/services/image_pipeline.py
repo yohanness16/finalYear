@@ -278,6 +278,20 @@ async def process_esp32_telemetry(
     except Exception:
         pass
 
+    # ── Step 6b: Store detailed CV result in Redis ──
+    try:
+        from app.services.redis_cache import update_cv_result
+        await update_cv_result(
+            plate=vehicle.plate_number,
+            occupancy_level=occupancy_level,
+            people_count=cv_result["people_count"],
+            crowd_density=cv_result["crowd_density"],
+            confidence=cv_result["confidence"],
+            method=cv_result["method"],
+        )
+    except Exception:
+        pass
+
     # ── Step 7: Compute ETAs if on route ──
     eta_payloads = {}
     if vehicle.route and route_stops:
