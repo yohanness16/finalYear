@@ -7,8 +7,9 @@
 │                        Azure Cloud                                   │
 │  ┌─────────────────────┐    ┌──────────────────────────────────┐    │
 │  │  Container Registry  │───▶│  App Service (Linux, Docker)     │    │
-│  │  (ACR)               │    │  ┌────────────────────────────┐  │    │
-│  └─────────────────────┘    │  │  FastAPI + OpenCV          │  │    │
+│  │  (ACR)               │    │  api.bustrack.dpdns.org          │    │
+│  └─────────────────────┘    │  ┌────────────────────────────┐  │    │
+│                              │  │  FastAPI + OpenCV          │  │    │
 │                              │  │  Port 8000                  │  │    │
 │                              │  └──────────┬─────────────────┘  │    │
 │                              └─────────────┼────────────────────┘    │
@@ -19,9 +20,18 @@
                     ▼                        ▼                        ▼
            ┌──────────────┐        ┌──────────────┐        ┌──────────────┐
            │   Supabase   │        │   Upstash    │        │   Resend     │
-           │  PostgreSQL  │        │    Redis     │        │    Email     │
+           │  PostgreSQL  │        │    Redis     │        │  (bustrack   │
+           │              │        │              │        │  .dpdns.org) │
            └──────────────┘        └──────────────┘        └──────────────┘
 ```
+
+## Domain Configuration
+
+| Service | Domain |
+|---------|--------|
+| Frontend | `bustrack.dpdns.org` |
+| Backend API | `api.bustrack.dpdns.org` |
+| Email (Resend) | `noreply@bustrack.dpdns.org` |
 
 ## Prerequisites
 
@@ -87,7 +97,21 @@ alembic upgrade head
 3. Name: `bustrack-production`
 4. Copy the key (starts with `re_`)
 5. Save for later
-6. (Optional but recommended) Add and verify your domain at **Domains**
+
+### Verify Domain in Resend (Required for production email)
+
+1. In Resend Dashboard → **Domains** → **Add Domain**
+2. Enter: `bustrack.dpdns.org`
+3. Resend will give you DNS records to add (TXT for SPF, DKIM, DMARC)
+4. Go to your **dpdns.org** control panel and add these records:
+   - **TXT** record for domain verification
+   - **TXT** record for SPF (`v=spf1 include:spf.resend.com ~all`)
+   - **CNAME** records for DKIM (Resend provides 3 CNAME records)
+   - **TXT** record for DMARC (`v=DMARC1; p=none; rua=mailto:dmarc@bustrack.dpdns.org`)
+5. Click **Verify** in Resend dashboard
+6. Wait a few minutes for DNS propagation
+
+> **Note**: Without domain verification, emails will be sent from `resend.dev` which many email providers mark as spam. Verifying `bustrack.dpdns.org` ensures emails come from `noreply@bustrack.dpdns.org`.
 
 ---
 
@@ -202,11 +226,45 @@ az webapp config appsettings set \
 
 ---
 
-## Step 8: Verify Deployment
+## Step 8: Configure DNS (dpdns.org)
+
+After Terraform creates the App Service, you need to point your domain to it:
 
 ```bash
-# Health check
+# Get the Azure default hostname
+terraform output app_service_url
+# Example output: https://bustrack-prod-api.azurewebsites.net
+```
+
+### At dpdns.org control panel:
+
+1. Log in to your dpdns.org account
+2. Find `bustrack.dpdns.org` zone
+3. Add a **CNAME** record:
+   ```
+   Name:  api
+   Value: bustrack-prod-api.azurewebsites.net
+   TTL:   300
+   ```
+4. Save and wait ~5 minutes for DNS propagation
+
+### Verify DNS:
+
+```bash
+# Check CNAME resolution
+nslookup api.bustrack.dpdns.org
+
+# Should resolve to the Azure hostname
+```
+
+## Step 9: Verify Deployment
+
+```bash
+# Health check (Azure default hostname)
 curl https://bustrack-prod-api.azurewebsites.net/health
+
+# Health check (custom domain — after DNS propagates)
+curl https://api.bustrack.dpdns.org/health
 
 # Expected: {"status":"healthy"} or similar
 
