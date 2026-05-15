@@ -1,16 +1,42 @@
-name: CD
+# ──────────────────────────────────────────────────────────────────────────────
+# BusTrack — Continuous Deployment
+# ──────────────────────────────────────────────────────────────────────────────
+# On push to main:
+#   1. Run tests (lint, unit, integration)
+#   2. Build Docker image
+#   3. Push to Azure Container Registry (ACR)
+#   4. Deploy to Azure App Service
+#
+# Required GitHub Secrets:
+#   AZURE_CREDENTIALS       — Azure service principal JSON
+#   ACR_LOGIN_SERVER        — ACR login server (e.g., bustrack.azurecr.io)
+#   ACR_USERNAME            — ACR username
+#   ACR_PASSWORD            — ACR password
+#   DATABASE_URL            — Supabase connection string
+#   REDIS_URL               — Upstash Redis URL
+#   SECRET_KEY              — JWT secret key
+#   RESEND_API_KEY          — Resend API key
+#   GOOGLE_CLIENT_ID        — Google OAuth Client ID
+#   APP_BASE_URL            — Frontend URL
+#   CORS_ORIGINS            — Allowed CORS origins
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: CD — Build, Push & Deploy
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
 
 env:
   PYTHON_VERSION: "3.11"
+  ACR_NAME: bustrack
+  APP_NAME: bustrack-prod-api
+  DOCKER_IMAGE: bustrack.azurecr.io/bustrack-api
 
 jobs:
-  deploy-check:
-    name: Pre-deploy Validation
+  # ── Job 1: Test ────────────────────────────────────────────────────────────
+  test:
+    name: Test & Validate
     runs-on: ubuntu-latest
 
     services:
@@ -42,12 +68,11 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://postgres:testpass@localhost:5432/test_db
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: cd-test-secret-key
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
       GOOGLE_CLIENT_ID: ""
-      GOOGLE_CLIENT_SECRET: ""
-      GOOGLE_REDIRECT_URI: ""
-      GEOCODING_API_KEY: ""
+      RESEND_API_KEY: ""
+      APP_BASE_URL: http://localhost:3000
+      CORS_ORIGINS: "*"
+      FIREWALL_ENABLED: "false"
 
     steps:
       - name: Checkout code
@@ -63,32 +88,131 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run all tests
+      - name: Run linter
         run: |
-          pytest -v --tb=short
+          pip install ruff
+          ruff check app/ --output-format=github
 
-      - name: Run migrations check
+      - name: Run tests
         run: |
-          alembic -c alembic.ini upgrade head
+          pytest -v --tb=short -x
 
-      - name: Verify OpenAPI spec is valid
+      - name: Verify migrations
         run: |
-          python -c "from app.main import app; app.openapi(); print('OpenAPI spec valid')"
+          alembic upgrade head
 
-  release:
-    name: Create Release
+      - name: Verify OpenAPI spec
+        run: |
+          python -c "from app.main import app; app.openapi(); print('✅ OpenAPI spec valid')"
+
+  # ── Job 2: Build & Push Docker Image ──────────────────────────────────────
+  build-and-push:
+    name: Build & Push to ACR
     runs-on: ubuntu-latest
-    needs: deploy-check
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Generate image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          TAG="${{ env.DOCKER_IMAGE }}:${SHORT_SHA}"
+          echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Image tag: ${TAG}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
         with:
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  # ── Job 3: Deploy to Azure App Service ────────────────────────────────────
+  deploy:
+    name: Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: production
+      url: https://${{ env.APP_NAME }}.azurewebsites.net
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          images: ${{ needs.build-and-push.outputs.image_tag }}
+
+      - name: Configure App Service environment variables
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.APP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "DATABASE_URL", "value": "${{ secrets.DATABASE_URL }}", "slotSetting": false},
+              {"name": "REDIS_URL", "value": "${{ secrets.REDIS_URL }}", "slotSetting": false},
+              {"name": "SECRET_KEY", "value": "${{ secrets.SECRET_KEY }}", "slotSetting": false},
+              {"name": "GOOGLE_CLIENT_ID", "value": "${{ secrets.GOOGLE_CLIENT_ID }}", "slotSetting": false},
+              {"name": "RESEND_API_KEY", "value": "${{ secrets.RESEND_API_KEY }}", "slotSetting": false},
+              {"name": "RESEND_FROM_EMAIL", "value": "noreply@bustrack.et", "slotSetting": false},
+              {"name": "APP_BASE_URL", "value": "${{ secrets.APP_BASE_URL }}", "slotSetting": false},
+              {"name": "CORS_ORIGINS", "value": "${{ secrets.CORS_ORIGINS }}", "slotSetting": false},
+              {"name": "FIREWALL_ENABLED", "value": "true", "slotSetting": false},
+              {"name": "TRUSTED_PROXY_IPS", "value": "*", "slotSetting": false},
+              {"name": "WEBSITES_PORT", "value": "8000", "slotSetting": false}
+            ]
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for app to start..."
+          sleep 30
+          HEALTH_URL="https://${{ env.APP_NAME }}.azurewebsites.net/health"
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Deployment healthy! (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 10s..."
+            sleep 10
+          done
+          echo "❌ Deployment health check failed"
+          exit 1
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
