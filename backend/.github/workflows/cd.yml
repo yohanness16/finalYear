@@ -188,7 +188,7 @@ jobs:
               {"name": "SECRET_KEY", "value": "${{ secrets.SECRET_KEY }}", "slotSetting": false},
               {"name": "GOOGLE_CLIENT_ID", "value": "${{ secrets.GOOGLE_CLIENT_ID }}", "slotSetting": false},
               {"name": "RESEND_API_KEY", "value": "${{ secrets.RESEND_API_KEY }}", "slotSetting": false},
-              {"name": "RESEND_FROM_EMAIL", "value": "noreply@bustrack.et", "slotSetting": false},
+              {"name": "RESEND_FROM_EMAIL", "value": "noreply@bustrack.dpdns.org", "slotSetting": false},
               {"name": "APP_BASE_URL", "value": "${{ secrets.APP_BASE_URL }}", "slotSetting": false},
               {"name": "CORS_ORIGINS", "value": "${{ secrets.CORS_ORIGINS }}", "slotSetting": false},
               {"name": "FIREWALL_ENABLED", "value": "true", "slotSetting": false},
@@ -200,7 +200,7 @@ jobs:
         run: |
           echo "Waiting for app to start..."
           sleep 30
-          HEALTH_URL="https://${{ env.APP_NAME }}.azurewebsites.net/health"
+          HEALTH_URL="https://api.bustrack.dpdns.org/health"
           for i in $(seq 1 10); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
             if [ "$STATUS" = "200" ]; then
