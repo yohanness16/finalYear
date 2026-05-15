@@ -1,9 +1,11 @@
-"""Push live vehicle position updates to WebSocket subscribers (admin dashboard)."""
+"""Push live vehicle position and CV updates to WebSocket subscribers (admin dashboard)."""
 
 from __future__ import annotations
 
 import time
 from typing import Any
+
+from app.services.websocket import manager
 
 
 async def broadcast_vehicle_position(
@@ -15,12 +17,15 @@ async def broadcast_vehicle_position(
     route_id: int | None,
     timestamp: float | None = None,
     bus_type: str | None = None,
-    image_path: str | None = None,
+    occupancy_level: int | None = None,
 ) -> None:
-    """Swallows errors so telemetry never fails if WebSocket layer has issues."""
-    try:
-        from app.services.websocket import manager
+    """
+    Broadcast vehicle position update to all admin WebSocket clients.
 
+    Includes occupancy_level from CV analysis so the admin dashboard
+    can show crowd density alongside position on the live map.
+    """
+    try:
         ts = timestamp if timestamp is not None else time.time()
         payload: dict[str, Any] = {
             "type": "vehicle_position",
@@ -34,6 +39,43 @@ async def broadcast_vehicle_position(
         }
         if bus_type is not None:
             payload["bus_type"] = bus_type
+        if occupancy_level is not None:
+            payload["occupancy_level"] = occupancy_level
+        await manager.broadcast(payload)
+    except Exception:
+        pass
+
+
+async def broadcast_cv_result(
+    vehicle_id: int,
+    plate_number: str,
+    cv_result: dict[str, Any],
+    image_path: str | None = None,
+    timestamp: float | None = None,
+) -> None:
+    """
+    Broadcast detailed CV analysis result to all admin WebSocket clients.
+
+    This is a separate message type from vehicle_position so the admin
+    dashboard can update the crowd density panel, show people count,
+    confidence score, and method used.
+    """
+    try:
+        ts = timestamp if timestamp is not None else time.time()
+        payload: dict[str, Any] = {
+            "type": "cv_result",
+            "vehicle_id": vehicle_id,
+            "plate_number": plate_number,
+            "timestamp": ts,
+            "cv": {
+                "people_count": cv_result.get("people_count", 0),
+                "crowd_density": cv_result.get("crowd_density", 0),
+                "is_crowded": cv_result.get("is_crowded", False),
+                "method": cv_result.get("method", "unknown"),
+                "confidence": cv_result.get("confidence", 0.0),
+                "foreground_ratio": cv_result.get("foreground_ratio", 0.0),
+            },
+        }
         if image_path is not None:
             payload["image_path"] = image_path
         await manager.broadcast(payload)
