@@ -52,6 +52,34 @@ class Settings(BaseSettings):
     # Live position age cutoff (seconds)
     LIVE_POSITION_MAX_AGE_SECONDS: int = 180
 
+    # --- Security ---
+    # Allowed CORS origins (comma-separated). "*" = allow all (dev only).
+    CORS_ORIGINS: str = "*"
+
+    # Firewall blocklist file path
+    BLOCKLIST_PATH: str = "storage/firewall_blocklist.txt"
+
+    # Firewall anomaly thresholds
+    FIREWALL_AUTO_BAN_THRESHOLD: int = 100
+    FIREWALL_AUTO_BAN_WINDOW_SECONDS: int = 300
+    FIREWALL_AUTO_BAN_DURATION_SECONDS: int = 3600
+    FIREWALL_BURST_THRESHOLD: int = 50
+    FIREWALL_BURST_WINDOW_SECONDS: int = 10
+
+    # Request validation
+    MAX_JSON_BODY_BYTES: int = 1_048_576       # 1 MB
+    MAX_MULTIPART_BODY_BYTES: int = 10_485_760  # 10 MB
+    MAX_FORM_BODY_BYTES: int = 524_288          # 512 KB
+
+    # HSTS max-age in seconds (1 year)
+    HSTS_MAX_AGE: int = 31_536_000
+
+    # Enable/disable firewall middleware
+    FIREWALL_ENABLED: bool = True
+
+    # Trust X-Forwarded-For from these proxy IPs (comma-separated)
+    TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
+
 
 @lru_cache
 def get_settings() -> Settings:
