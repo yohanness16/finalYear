@@ -88,3 +88,28 @@ class BusDashboardLoginResponse(BaseModel):
     token_type: str = "bearer"
     vehicle_id: int
     device_id: str
+
+
+class VerifyEmailRequest(BaseModel):
+    """Verify email with token from email link."""
+
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    """Resend verification email."""
+
+    email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request password reset email."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password with token from email."""
+
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
