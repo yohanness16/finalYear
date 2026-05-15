@@ -82,9 +82,9 @@ class Settings(BaseSettings):
 
     # --- Email (Resend) ---
     RESEND_API_KEY: str = ""
-    RESEND_FROM_EMAIL: str = "noreply@bustrack.et"
+    RESEND_FROM_EMAIL: str = "noreply@bustrack.dpdns.org"
     # Base URL of the frontend app (for verification/reset links)
-    APP_BASE_URL: str = "http://localhost:3000"
+    APP_BASE_URL: str = "https://bustrack.dpdns.org"
 
 
 @lru_cache
