@@ -95,7 +95,14 @@ def setup_vehicles(admin: APIClient, vehicles: list[dict]) -> dict:
     registered = {}
 
     for v in vehicles:
-        result = admin.post("/vehicles", v)
+        payload = {
+            "plate_number": v["plate_number"],
+            "device_id": v["device_id"],
+            "bus_type": v["bus_type"],
+            "capacity": v["capacity"],
+            "is_active": True,
+        }
+        result = admin.post("/vehicles", payload)
         if result:
             ok(f"Bus {v['plate_number']} ({v['bus_type']}, cap {v['capacity']})")
             registered[v["plate_number"]] = result
@@ -326,7 +333,7 @@ def main():
     print(f"  ✓ {len(state['passengers'])} passengers ready")
     print(f"  ✓ {len(state['vehicles'])} vehicles registered")
     print(f"  ✓ {len(state['routes'])} routes configured")
-    print(f"\n  Next: Run  python 02_simulate_buses.py")
+    print(f"\n  Next: Run  python 02_simulate_buses_esp32.py")
 
     admin.close()
 
