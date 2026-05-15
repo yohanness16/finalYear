@@ -101,7 +101,7 @@ variable "resend_api_key" {
 variable "resend_from_email" {
   description = "From address for Resend emails"
   type        = string
-  default     = "noreply@bustrack.et"
+  default     = "noreply@bustrack.dpdns.org"
 }
 
 variable "google_client_id" {
@@ -119,7 +119,7 @@ variable "secret_key" {
 variable "app_base_url" {
   description = "Frontend app base URL (for email verification/reset links)"
   type        = string
-  default     = "https://bustrack.et"
+  default     = "https://bustrack.dpdns.org"
 }
 
 variable "cors_origins" {
@@ -226,11 +226,30 @@ resource "azurerm_linux_web_app" "api" {
   tags = local.common_tags
 }
 
+# ── Custom Domain Binding (api.bustrack.dpdns.org) ──────────────────────────
+
+resource "azurerm_app_service_custom_hostname_binding" "api" {
+  hostname            = "api.bustrack.dpdns.org"
+  app_service_name    = azurerm_linux_web_app.api.name
+  resource_group_name = azurerm_resource_group.main.name
+
+  # Lifecycle: don't destroy the binding on 'terraform destroy'
+  # so the domain stays configured if you re-deploy
+  lifecycle {
+    ignore_changes = [ssl_state, thumbprint]
+  }
+}
+
 # ── Outputs ──────────────────────────────────────────────────────────────────
 
 output "app_service_url" {
-  description = "URL of the deployed API"
+  description = "URL of the deployed API (Azure default hostname)"
   value       = "https://${azurerm_linux_web_app.api.default_hostname}"
+}
+
+output "custom_domain_url" {
+  description = "Custom domain URL for the API"
+  value       = "https://api.bustrack.dpdns.org"
 }
 
 output "app_service_name" {
@@ -258,4 +277,19 @@ output "acr_admin_password" {
 output "resource_group_name" {
   description = "Name of the resource group"
   value       = azurerm_resource_group.main.name
+}
+
+output "dns_config" {
+  description = "DNS records to create at dpdns.org"
+  value       = <<-EOT
+    ┌─────────────────────────────────────────────────────────────┐
+    │  DNS Configuration for api.bustrack.dpdns.org              │
+    │                                                             │
+    │  At your dpdns.org control panel, create:                  │
+    │                                                             │
+    │  CNAME  api.bustrack.dpdns.org  →  ${azurerm_linux_web_app.api.default_hostname}
+    │                                                             │
+    │  (Point the CNAME to the Azure default hostname above)     │
+    └─────────────────────────────────────────────────────────────┘
+  EOT
 }

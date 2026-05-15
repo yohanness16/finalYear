@@ -30,7 +30,7 @@ upstash_redis_token = "YOUR_UPSTASH_REST_TOKEN"
 # ── Resend ──
 # Get from resend.com/api-keys
 resend_api_key    = "re_xxxxxxxxxxxxx"
-resend_from_email = "noreply@bustrack.et"
+resend_from_email = "noreply@bustrack.dpdns.org"
 
 # ── Google OAuth ──
 # Get from Google Cloud Console → APIs & Services → Credentials → OAuth Client ID
@@ -41,7 +41,7 @@ google_client_id = "xxx.apps.googleusercontent.com"
 secret_key = "your-jwt-secret-key-here-min-32-chars"
 
 # Frontend URL for email links
-app_base_url = "https://bustrack.et"
+app_base_url = "https://bustrack.dpdns.org"
 
-# CORS origins (your frontend domain)
-cors_origins = "https://bustrack.et,https://www.bustrack.et"
+# CORS origins (your frontend + backend domains)
+cors_origins = "https://bustrack.dpdns.org,https://api.bustrack.dpdns.org"
