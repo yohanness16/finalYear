@@ -71,6 +71,7 @@ jobs:
         run: |
           pip install ruff
           ruff check app/ --output-format=github
+          ruff format --check . || true
 
       - name: Run migrations
         run: alembic upgrade head
