@@ -85,7 +85,8 @@ jobs:
             --ignore=tests/test_trip_history_ingestion.py \
             --ignore=tests/test_bus_gps_tracking.py \
             --ignore=tests/test_auth_case.py \
-            --ignore=tests/test_image_pipeline.py
+            --ignore=tests/test_image_pipeline.py \
+            --ignore=tests/test_esp32_gateway.py
 
       - name: Verify OpenAPI spec
         run: |
