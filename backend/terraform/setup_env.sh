@@ -113,18 +113,18 @@ generate_tfvars() {
     SECRET_KEY=$(parse_env "SECRET_KEY")
     GOOGLE_CLIENT_ID=$(parse_env "GOOGLE_CLIENT_ID" "")
     RESEND_API_KEY=$(parse_env "RESEND_API_KEY" "")
-    RESEND_FROM_EMAIL=$(parse_env "RESEND_FROM_EMAIL" "noreply@bustrack.dpdns.org")
+    RESEND_FROM_EMAIL=$(parse_env "RESEND_FROM_EMAIL" "no-reply@bustrack.dpdns.org")
     APP_BASE_URL=$(parse_env "APP_BASE_URL" "https://bustrack.dpdns.org")
 
-    # Convert postgresql:// to postgresql+asyncpg:// if needed
+    # Convert postgresql:// to postgresql+asyncpg:// using valid Bash expansion
     if [[ "$DATABASE_URL" == postgresql://* ]]; then
-        DATABASE_URL="${postgresql://postgresql+asyncpg://}"
+        DATABASE_URL="${DATABASE_URL/postgresql:\/\//postgresql+asyncpg:\/\/}"
         info "Converted DATABASE_URL to asyncpg format"
     fi
 
-    # If DATABASE_URL doesn't have asyncpg, add it
+    # If DATABASE_URL uses postgres:// format, switch it safely to postgresql+asyncpg://
     if [[ "$DATABASE_URL" == postgres://* ]] && [[ "$DATABASE_URL" != *+asyncpg* ]]; then
-        DATABASE_URL=$(echo "$DATABASE_URL" | sed 's|postgres://|postgresql+asyncpg://|')
+        DATABASE_URL="${DATABASE_URL/postgres:\/\//postgresql+asyncpg:\/\/}"
         info "Converted DATABASE_URL to asyncpg format"
     fi
 
@@ -170,7 +170,7 @@ generate_tfvars() {
 
 project_name = "bustrack"
 environment  = "prod"
-location     = "eastus"
+location     = "southafricanorth"
 
 # B1 = basic tier (cheapest with always-on), P1v2 = production
 app_service_sku = "B1"
@@ -259,10 +259,10 @@ tf_apply() {
     terraform output dns_config 2>/dev/null || true
     echo ""
     info "Next steps:"
-    info "  1. Configure DNS CNAME at dpdns.org (see above)"
+    info "  1. Verify Cloudflare handles the api.bustrack.dpdns.org CNAME mapping"
     info "  2. Push Docker image: docker push \$(terraform output -raw acr_login_server)/bustrack-api:latest"
-    info "  3. Run migrations against Supabase"
-    info "  4. Verify: curl https://api.bustrack.dpdns.org/health"
+    info "  3. Run database migrations against Supabase"
+    info "  4. Verify application status: curl https://api.bustrack.dpdns.org/health"
 }
 
 # ── Terraform destroy ─────────────────────────────────────────────────────────
