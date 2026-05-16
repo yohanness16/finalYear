@@ -27,11 +27,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     # Content-Security-Policy for API (restrictive — APIs serve JSON, not HTML)
     CSP_POLICY = (
-        "default-src 'none'; "
-        "frame-ancestors 'none'; "
-        "base-uri 'none'; "
-        "form-action 'none'"
-    )
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+    "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+    "img-src 'self' https://fastapi.tiangolo.com data:; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
 
     # Referrer policy: no referrer for API responses
     REFERRER_POLICY = "no-referrer"
