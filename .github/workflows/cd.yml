@@ -6,9 +6,9 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  ACR_NAME: bustrack
+  ACR_NAME: bustrackacr
   APP_NAME: bustrack-prod-api
-  DOCKER_IMAGE: bustrack.azurecr.io/bustrack-api
+  DOCKER_IMAGE: bustrackacr.azurecr.io/bustrack-api
 
 jobs:
   test:
@@ -73,8 +73,7 @@ jobs:
           ruff check app/ --output-format=github
 
       - name: Run migrations
-        run: |
-          alembic upgrade head
+        run: alembic upgrade head
 
       - name: Run tests
         run: |
