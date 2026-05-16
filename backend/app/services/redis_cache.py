@@ -10,11 +10,16 @@ from app.core.config import get_settings
 _settings = get_settings()
 
 def _build_redis_kwargs(url: str) -> dict:
-    kwargs: dict = {"decode_responses": True}
+    kwargs = {
+        "decode_responses": True
+    }
+
     if url.startswith("rediss://"):
         import ssl
+
         kwargs["ssl"] = True
-        kwargs["ssl_cert_reqs"] = "none"
+        kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+
     return kwargs
 
 redis_cache = redis.from_url(_settings.REDIS_URL, **_build_redis_kwargs(_settings.REDIS_URL))
