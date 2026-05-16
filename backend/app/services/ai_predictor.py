@@ -2,13 +2,17 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from app.services.ml_features import FEATURE_NAMES, build_feature_dict, build_feature_vector, time_features
+from app.services.ml_features import (
+    FEATURE_NAMES,
+    build_feature_dict,
+    build_feature_vector,
+    time_features,
+)
 
 _model = None
 _feature_names: list[str] = FEATURE_NAMES.copy()
-_model_version: Optional[str] = None
+_model_version: str | None = None
 _model_path = Path(__file__).parent / "delay_predictor.joblib"
 
 
@@ -19,6 +23,7 @@ def _load_model():
     if _model_path.exists():
         try:
             import joblib
+
             payload = joblib.load(_model_path)
             if isinstance(payload, dict) and "model" in payload:
                 _model = payload.get("model")
@@ -28,7 +33,9 @@ def _load_model():
                     _feature_names = [str(n) for n in names]
             else:
                 _model = payload
-            _model_version = str(_model_path.stat().st_mtime) if _model_path.exists() else None
+            _model_version = (
+                str(_model_path.stat().st_mtime) if _model_path.exists() else None
+            )
             return _model
         except Exception:
             pass
@@ -47,13 +54,13 @@ def model_loaded() -> bool:
     return _load_model() is not None
 
 
-def get_model_version() -> Optional[str]:
+def get_model_version() -> str | None:
     """Return model version (mtime) if loaded."""
     _load_model()
     return _model_version
 
 
-def predict_eta_adjustment(features: dict) -> Optional[float]:
+def predict_eta_adjustment(features: dict) -> float | None:
     """Predict ETA adjustment in seconds. Returns None if model not loaded."""
     model = _load_model()
     if model is None:
@@ -68,7 +75,7 @@ def predict_eta_adjustment(features: dict) -> Optional[float]:
         return None
 
 
-def predict_delay(stop_id: Optional[int], occupancy_level: int) -> Optional[float]:
+def predict_delay(stop_id: int | None, occupancy_level: int) -> float | None:
     """Backward-compatible delay prediction using minimal features."""
     now = datetime.now()
     hour, dow, is_peak = time_features(now)

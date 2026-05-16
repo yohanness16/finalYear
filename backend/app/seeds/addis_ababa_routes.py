@@ -13,10 +13,32 @@ ADDIS_ABABA_ROUTES_SEED = [
         "origin": "Kality Bus Station",
         "destination": "Meskel Square",
         "stops": [
-            {"name": "Kality Bus Station", "lat": 9.0167, "lon": 38.7667, "sequence": 1, "is_terminal": True},
-            {"name": "Bole Road (near Ghana St)", "lat": 9.0200, "lon": 38.7700, "sequence": 2},
-            {"name": "Africa Avenue (near St. Joseph)", "lat": 9.0250, "lon": 38.7750, "sequence": 3},
-            {"name": "Meskel Square", "lat": 9.0300, "lon": 38.7800, "sequence": 4, "is_terminal": True},
+            {
+                "name": "Kality Bus Station",
+                "lat": 9.0167,
+                "lon": 38.7667,
+                "sequence": 1,
+                "is_terminal": True,
+            },
+            {
+                "name": "Bole Road (near Ghana St)",
+                "lat": 9.0200,
+                "lon": 38.7700,
+                "sequence": 2,
+            },
+            {
+                "name": "Africa Avenue (near St. Joseph)",
+                "lat": 9.0250,
+                "lon": 38.7750,
+                "sequence": 3,
+            },
+            {
+                "name": "Meskel Square",
+                "lat": 9.0300,
+                "lon": 38.7800,
+                "sequence": 4,
+                "is_terminal": True,
+            },
         ],
     },
     {
@@ -25,10 +47,27 @@ ADDIS_ABABA_ROUTES_SEED = [
         "origin": "Akaki",
         "destination": "Entoto Hills",
         "stops": [
-            {"name": "Akaki Terminal", "lat": 9.0000, "lon": 38.7500, "sequence": 1, "is_terminal": True},
-            {"name": "Bole International Approach", "lat": 9.0120, "lon": 38.7600, "sequence": 2},
+            {
+                "name": "Akaki Terminal",
+                "lat": 9.0000,
+                "lon": 38.7500,
+                "sequence": 1,
+                "is_terminal": True,
+            },
+            {
+                "name": "Bole International Approach",
+                "lat": 9.0120,
+                "lon": 38.7600,
+                "sequence": 2,
+            },
             {"name": "Entoto Hills Base", "lat": 9.0450, "lon": 38.7800, "sequence": 3},
-            {"name": "Entoto Hills Summit", "lat": 9.0500, "lon": 38.7850, "sequence": 4, "is_terminal": True},
+            {
+                "name": "Entoto Hills Summit",
+                "lat": 9.0500,
+                "lon": 38.7850,
+                "sequence": 4,
+                "is_terminal": True,
+            },
         ],
     },
     {
@@ -37,9 +76,21 @@ ADDIS_ABABA_ROUTES_SEED = [
         "origin": "Gulele",
         "destination": "Saris",
         "stops": [
-            {"name": "Gulele Square", "lat": 9.0380, "lon": 38.7450, "sequence": 1, "is_terminal": True},
+            {
+                "name": "Gulele Square",
+                "lat": 9.0380,
+                "lon": 38.7450,
+                "sequence": 1,
+                "is_terminal": True,
+            },
             {"name": "Wollo Sefer", "lat": 9.0400, "lon": 38.7550, "sequence": 2},
-            {"name": "Saris Market", "lat": 9.0480, "lon": 38.7600, "sequence": 3, "is_terminal": True},
+            {
+                "name": "Saris Market",
+                "lat": 9.0480,
+                "lon": 38.7600,
+                "sequence": 3,
+                "is_terminal": True,
+            },
         ],
     },
 ]
@@ -71,9 +122,7 @@ async def seed_addis_ababa_routes(db: AsyncSession) -> None:
 
         for stop_data in item["stops"]:
             stop = (
-                await db.execute(
-                    select(Stop).where(Stop.name == stop_data["name"])
-                )
+                await db.execute(select(Stop).where(Stop.name == stop_data["name"]))
             ).scalar_one_or_none()
             if not stop:
                 stop = Stop(

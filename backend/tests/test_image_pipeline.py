@@ -8,7 +8,9 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def _make_test_image(width: int = 640, height: int = 480, color: tuple = (128, 128, 128)) -> bytes:
+def _make_test_image(
+    width: int = 640, height: int = 480, color: tuple = (128, 128, 128)
+) -> bytes:
     """Create a synthetic JPEG image for testing."""
     img = Image.new("RGB", (width, height), color)
     buf = io.BytesIO()
@@ -171,9 +173,7 @@ class TestImagePipeline:
             mock_crud.get_vehicle_by_plate = AsyncMock(return_value=mock_vehicle)
 
             with pytest.raises(ValueError, match="plate_number already registered"):
-                await _resolve_vehicle(
-                    mock_db, "NEW-DEVICE", "TEST-001", None, None
-                )
+                await _resolve_vehicle(mock_db, "NEW-DEVICE", "TEST-001", None, None)
 
     @pytest.mark.asyncio
     async def test_validate_gps_no_route(self):
@@ -194,7 +194,9 @@ class TestImagePipeline:
         mock_stop.longitude = 40.0
 
         with patch("app.services.image_pipeline.is_on_route", return_value=False):
-            lat, lon, rejection = await _validate_gps(9.03, 38.74, "TEST-001", [mock_stop])
+            lat, lon, rejection = await _validate_gps(
+                9.03, 38.74, "TEST-001", [mock_stop]
+            )
             assert rejection == "off_route"
 
     @pytest.mark.asyncio
@@ -210,6 +212,7 @@ class TestImagePipeline:
 
             # Use actual file system via tmp_path
             import app.services.image_pipeline as pipeline_module
+
             original_parents = pipeline_module.Path.__truediv__
 
             path, saved = await _store_image(image_bytes, "test.jpg")
@@ -296,19 +299,33 @@ class TestLiveBroadcast:
     @pytest.mark.asyncio
     async def test_broadcast_error_handling(self):
         """Broadcast functions should never raise."""
-        from app.services.live_broadcast import broadcast_vehicle_position, broadcast_cv_result
+        from app.services.live_broadcast import (
+            broadcast_cv_result,
+            broadcast_vehicle_position,
+        )
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
             mock_mgr.broadcast = AsyncMock(side_effect=Exception("WS down"))
             # Should not raise
             await broadcast_vehicle_position(
-                vehicle_id=1, plate_number="TEST", lat=0, lon=0,
-                speed=0, route_id=None,
+                vehicle_id=1,
+                plate_number="TEST",
+                lat=0,
+                lon=0,
+                speed=0,
+                route_id=None,
             )
             await broadcast_cv_result(
-                vehicle_id=1, plate_number="TEST",
-                cv_result={"people_count": 0, "crowd_density": 0, "is_crowded": False,
-                           "method": "fallback", "confidence": 0, "foreground_ratio": 0},
+                vehicle_id=1,
+                plate_number="TEST",
+                cv_result={
+                    "people_count": 0,
+                    "crowd_density": 0,
+                    "is_crowded": False,
+                    "method": "fallback",
+                    "confidence": 0,
+                    "foreground_ratio": 0,
+                },
             )
 
 
@@ -317,19 +334,21 @@ class TestRedisCVStorage:
 
     @pytest.mark.asyncio
     async def test_update_and_get_cv_result(self):
-        from app.services.redis_cache import update_cv_result, get_cv_result
+        from app.services.redis_cache import get_cv_result, update_cv_result
 
         with patch("app.services.redis_cache.redis_cache") as mock_redis:
             mock_redis.hset = AsyncMock()
             mock_redis.expire = AsyncMock()
-            mock_redis.hgetall = AsyncMock(return_value={
-                "occupancy_level": "2",
-                "people_count": "8",
-                "crowd_density": "2",
-                "confidence": "0.85",
-                "method": "hog+foreground",
-                "updated_at": "1700000000",
-            })
+            mock_redis.hgetall = AsyncMock(
+                return_value={
+                    "occupancy_level": "2",
+                    "people_count": "8",
+                    "crowd_density": "2",
+                    "confidence": "0.85",
+                    "method": "hog+foreground",
+                    "updated_at": "1700000000",
+                }
+            )
 
             await update_cv_result(
                 plate="TEST-001",

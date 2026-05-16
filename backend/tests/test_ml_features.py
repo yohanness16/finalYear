@@ -1,4 +1,8 @@
-from app.services.ml_features import build_feature_dict, build_feature_vector, FEATURE_NAMES
+from app.services.ml_features import (
+    FEATURE_NAMES,
+    build_feature_dict,
+    build_feature_vector,
+)
 
 
 def test_feature_vector_length():

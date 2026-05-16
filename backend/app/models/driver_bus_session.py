@@ -14,9 +14,13 @@ class DriverBusSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
-    login_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    login_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     logout_at = Column(DateTime(timezone=True), nullable=True)
-    status = Column(String(20), nullable=False, default="active", server_default="active")
+    status = Column(
+        String(20), nullable=False, default="active", server_default="active"
+    )
 
     driver = relationship("User")
     vehicle = relationship("Vehicle", back_populates="driver_sessions")

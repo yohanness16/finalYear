@@ -1,11 +1,14 @@
 """Route and Stop models for public bus routes."""
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Boolean, UniqueConstraint
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
+
+
 class Route(Base):
     """Bus route definition (e.g., "121 Kality ↔ Meskel Square")."""
+
     __tablename__ = "routes"
     __table_args__ = (
         UniqueConstraint("route_number", "direction", name="uq_route_number_direction"),
@@ -27,11 +30,16 @@ class Route(Base):
     assignments = relationship("Assignment", back_populates="route")
     favorites = relationship("Favorite", back_populates="route")
     notification_settings = relationship("NotificationSetting", back_populates="route")
+
+
 class RouteStop(Base):
     """Stop sequence per route with GPS and operational details."""
+
     __tablename__ = "route_stops"
 
-    route_id = Column(Integer, ForeignKey("routes.id", ondelete="CASCADE"), primary_key=True)
+    route_id = Column(
+        Integer, ForeignKey("routes.id", ondelete="CASCADE"), primary_key=True
+    )
     stop_id = Column(Integer, ForeignKey("stops.id"), primary_key=True)
     sequence_order = Column(Integer, nullable=False)
 

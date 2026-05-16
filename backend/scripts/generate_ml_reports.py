@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.db.session import AsyncSessionLocal
-from app.services.ai_predictor import model_loaded, predict_eta_adjustment, reload_model
+from app.services.ai_predictor import predict_eta_adjustment, reload_model
 from app.services.ml_dataset import build_training_rows
 from app.services.trainer import train_from_db
 

@@ -1,11 +1,11 @@
 import asyncio
-from logging.config import fileConfig
 import os
 import sys
+from logging.config import fileConfig
 from os.path import abspath, dirname
 
-from dotenv import load_dotenv
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -15,12 +15,6 @@ sys.path.insert(0, BASE_DIR)
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 from app.db.base import Base
-from app.models.user import User
-from app.models.assignment import Assignment
-from app.models.vehicle import Vehicle
-from app.models.route import Route
-from app.models.trip_history import TripHistory
-from app.models.raw_telemetry import RawTelemetry
 
 target_metadata = Base.metadata
 

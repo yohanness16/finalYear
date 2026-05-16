@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -7,8 +6,8 @@ from pydantic import BaseModel, ConfigDict
 class VehicleBase(BaseModel):
     plate_number: str
     device_id: str
-    bus_type: Optional[str] = None
-    capacity: Optional[int] = None
+    bus_type: str | None = None
+    capacity: int | None = None
     is_active: bool = True
 
 
@@ -19,28 +18,28 @@ class VehicleCreate(VehicleBase):
 
 
 class VehicleUpdate(BaseModel):
-    plate_number: Optional[str] = None
-    bus_type: Optional[str] = None
-    capacity: Optional[int] = None
-    is_active: Optional[bool] = None
+    plate_number: str | None = None
+    bus_type: str | None = None
+    capacity: int | None = None
+    is_active: bool | None = None
 
 
 class VehicleAdminUpdate(BaseModel):
     """Admin-only partial update (e.g. assign bus to a route for on-route validation)."""
 
-    route_id: Optional[int] = None
+    route_id: int | None = None
 
 
 class VehicleResponse(VehicleBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    route_id: Optional[int] = None
-    route_number: Optional[str] = None
-    last_lat: Optional[float] = None
-    last_lon: Optional[float] = None
-    speed: Optional[float] = None
-    position_updated_at: Optional[datetime] = None
+    route_id: int | None = None
+    route_number: str | None = None
+    last_lat: float | None = None
+    last_lon: float | None = None
+    speed: float | None = None
+    position_updated_at: datetime | None = None
 
 
 class VehiclePosition(BaseModel):
@@ -50,8 +49,8 @@ class VehiclePosition(BaseModel):
     lon: float
     speed: float = 0.0
     timestamp: float  # Unix seconds (last position update)
-    route_id: Optional[int] = None
-    assignment_id: Optional[int] = None
+    route_id: int | None = None
+    assignment_id: int | None = None
 
 
 class LivePositionsEnvelope(BaseModel):
@@ -63,6 +62,6 @@ class TelemetryInput(BaseModel):
     device_id: str
     lat: float
     lon: float
-    speed: Optional[float] = None
-    pixel_count: Optional[int] = None
-    raw_payload: Optional[dict] = None
+    speed: float | None = None
+    pixel_count: int | None = None
+    raw_payload: dict | None = None

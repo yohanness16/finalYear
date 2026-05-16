@@ -1,7 +1,5 @@
 """Route and stop schemas."""
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -33,9 +31,9 @@ class RouteStopSchema(BaseModel):
 class RouteBase(BaseModel):
     route_number: str
     direction: str = "forward"
-    name: Optional[str] = None
-    origin: Optional[str] = None
-    destination: Optional[str] = None
+    name: str | None = None
+    origin: str | None = None
+    destination: str | None = None
 
 
 class RouteCreate(RouteBase):
@@ -43,10 +41,10 @@ class RouteCreate(RouteBase):
 
 
 class RouteUpdate(BaseModel):
-    direction: Optional[str] = None
-    name: Optional[str] = None
-    origin: Optional[str] = None
-    destination: Optional[str] = None
+    direction: str | None = None
+    name: str | None = None
+    origin: str | None = None
+    destination: str | None = None
 
 
 class RouteResponse(RouteBase):

@@ -101,7 +101,9 @@ def estimate_route_stop_eta_payloads(
         else:
             dwell_seconds = (stop.base_dwell_time or 30) * (stop.peak_multiplier or 1.0)
 
-        heuristic_eta = int((travel_seconds + dwell_seconds * occupancy_multiplier) + 0.5)
+        heuristic_eta = int(
+            (travel_seconds + dwell_seconds * occupancy_multiplier) + 0.5
+        )
         eta_seconds = heuristic_eta
         eta_mode = "heuristic"
         eta_ml_seconds = None

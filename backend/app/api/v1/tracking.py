@@ -1,20 +1,25 @@
 """Telemetry ingestion and live tracking endpoints."""
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from datetime import UTC
 
-from app.core.limiter import limiter
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.limiter import limiter
 from app.crud import assignment as crud_assignment
 from app.crud import tracking as crud_tracking
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
 from app.schemas.tracking import TelemetryInput
-from app.utils.gps_validation import get_average_coord, is_valid_coord
-from app.services.route_validation import find_nearest_stop, is_on_route
-from app.services.route_eta import estimate_route_stop_eta_payloads
 from app.services.cv_engine import estimate_density
-from app.services.redis_cache import get_route_stops, get_last_coords, set_bus_live_pipeline
+from app.services.redis_cache import (
+    get_last_coords,
+    get_route_stops,
+    set_bus_live_pipeline,
+)
+from app.services.route_eta import estimate_route_stop_eta_payloads
+from app.services.route_validation import find_nearest_stop, is_on_route
+from app.utils.gps_validation import get_average_coord, is_valid_coord
 from app.utils.redis_client import set_route_stop_etas
 
 router = APIRouter()
@@ -111,7 +116,9 @@ async def receive_telemetry(
         except Exception:
             pass
 
-    await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0.0)
+    await crud_vehicle.update_position(
+        db, vehicle.id, data.lat, data.lon, data.speed or 0.0
+    )
 
     if assignment and route_stops:
         nearest_stop = find_nearest_stop(data.lat, data.lon, route_stops)
@@ -128,11 +135,11 @@ async def receive_telemetry(
             except Exception:
                 pass
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.services.live_broadcast import broadcast_vehicle_position
 
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.now(UTC).timestamp()
     await broadcast_vehicle_position(
         vehicle_id=vehicle.id,
         plate_number=vehicle.plate_number,

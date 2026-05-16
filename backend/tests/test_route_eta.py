@@ -6,8 +6,12 @@ from app.services.route_eta import estimate_route_stop_eta_payloads
 
 def test_estimate_route_stop_eta_payloads_builds_per_stop_snapshots():
     stops = [
-        Stop(id=1, name="A", lat=9.0, lon=38.7, base_dwell_time=30, peak_multiplier=1.0),
-        Stop(id=2, name="B", lat=9.01, lon=38.71, base_dwell_time=45, peak_multiplier=1.5),
+        Stop(
+            id=1, name="A", lat=9.0, lon=38.7, base_dwell_time=30, peak_multiplier=1.0
+        ),
+        Stop(
+            id=2, name="B", lat=9.01, lon=38.71, base_dwell_time=45, peak_multiplier=1.5
+        ),
     ]
 
     payloads = estimate_route_stop_eta_payloads(

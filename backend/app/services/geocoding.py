@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
 from app.core.config import get_settings
 
 
-async def geocode_text(query: str) -> Optional[dict[str, Any]]:
+async def geocode_text(query: str) -> dict[str, Any] | None:
     """Resolve a user-provided location string to coordinates.
 
     Returns dict with lat, lon, provider, and label; None if not resolved.

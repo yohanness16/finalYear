@@ -6,29 +6,28 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
-    auth,
-    admin_users,
+    admin,
     admin_dashboard,
-    tracking,
-    gateway,
+    admin_users,
+    assignments,
+    auth,
     crowd,
+    favorites,
+    gateway,
+    notifications,
+    routes,
+    search,
+    tracking,
     users,
     vehicles,
-    routes,
-    assignments,
-    admin,
     websocket,
-    search,
-    favorites,
-    notifications,
 )
 from app.core.config import get_settings
-from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.firewall import FirewallMiddleware
 from app.middleware.request_validator import RequestValidationMiddleware
-from app.utils.redis_client import close_redis
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.redis_cache import close_redis_cache
-
+from app.utils.redis_client import close_redis
 
 settings = get_settings()
 
@@ -52,8 +51,8 @@ app = FastAPI(
 @app.get("/health", tags=["health"])
 async def health_check():
     """Health check endpoint for Azure App Service and load balancers."""
-    from app.utils.redis_client import get_redis
     from app.db.session import engine
+    from app.utils.redis_client import get_redis
 
     health = {"status": "healthy", "version": "1.0.0"}
 
@@ -77,7 +76,9 @@ async def health_check():
 
     status_code = 200 if health["status"] == "healthy" else 503
     from fastapi.responses import JSONResponse
+
     return JSONResponse(content=health, status_code=status_code)
+
 
 # ── Middleware stack (order matters: last added = first executed) ──
 
@@ -85,7 +86,7 @@ async def health_check():
 cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[cors_origins,"http://localhost:3000"],
+    allow_origins=[cors_origins, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

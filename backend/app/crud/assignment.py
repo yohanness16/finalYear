@@ -1,6 +1,6 @@
 """Assignment CRUD operations."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,9 @@ from sqlalchemy.orm import selectinload
 from app.models.assignment import Assignment
 
 
-async def get_active_assignment_by_driver(db: AsyncSession, driver_id: int) -> Assignment | None:
+async def get_active_assignment_by_driver(
+    db: AsyncSession, driver_id: int
+) -> Assignment | None:
     result = await db.execute(
         select(Assignment)
         .where(Assignment.driver_id == driver_id, Assignment.status == "active")
@@ -19,7 +21,9 @@ async def get_active_assignment_by_driver(db: AsyncSession, driver_id: int) -> A
     return result.scalar_one_or_none()
 
 
-async def get_active_assignment_by_vehicle(db: AsyncSession, vehicle_id: int) -> Assignment | None:
+async def get_active_assignment_by_vehicle(
+    db: AsyncSession, vehicle_id: int
+) -> Assignment | None:
     result = await db.execute(
         select(Assignment)
         .where(Assignment.vehicle_id == vehicle_id, Assignment.status == "active")
@@ -44,8 +48,12 @@ async def list_active_assignments(db: AsyncSession) -> list[Assignment]:
     return list(result.scalars().unique().all())
 
 
-async def create_assignment(db: AsyncSession, driver_id: int, vehicle_id: int, route_id: int) -> Assignment:
-    assignment = Assignment(driver_id=driver_id, vehicle_id=vehicle_id, route_id=route_id, status="active")
+async def create_assignment(
+    db: AsyncSession, driver_id: int, vehicle_id: int, route_id: int
+) -> Assignment:
+    assignment = Assignment(
+        driver_id=driver_id, vehicle_id=vehicle_id, route_id=route_id, status="active"
+    )
     db.add(assignment)
     await db.flush()
     await db.refresh(assignment)
@@ -57,12 +65,14 @@ async def end_assignment(db: AsyncSession, assignment_id: int) -> Assignment | N
     assignment = result.scalar_one_or_none()
     if assignment:
         assignment.status = "completed"
-        assignment.end_time = datetime.now(timezone.utc)
+        assignment.end_time = datetime.now(UTC)
         await db.flush()
         await db.refresh(assignment)
     return assignment
 
 
-async def get_assignment_by_id(db: AsyncSession, assignment_id: int) -> Assignment | None:
+async def get_assignment_by_id(
+    db: AsyncSession, assignment_id: int
+) -> Assignment | None:
     result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
     return result.scalar_one_or_none()

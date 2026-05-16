@@ -1,6 +1,6 @@
 """CRUD operations for driver bus sessions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,9 @@ async def get_active_session_for_driver(
 ) -> DriverBusSession | None:
     result = await db.execute(
         select(DriverBusSession)
-        .where(DriverBusSession.driver_id == driver_id, DriverBusSession.status == "active")
+        .where(
+            DriverBusSession.driver_id == driver_id, DriverBusSession.status == "active"
+        )
         .order_by(DriverBusSession.login_at.desc())
         .limit(1)
     )
@@ -34,18 +36,24 @@ async def create_session(
     return session
 
 
-async def get_session_by_id(db: AsyncSession, session_id: int) -> DriverBusSession | None:
-    result = await db.execute(select(DriverBusSession).where(DriverBusSession.id == session_id))
+async def get_session_by_id(
+    db: AsyncSession, session_id: int
+) -> DriverBusSession | None:
+    result = await db.execute(
+        select(DriverBusSession).where(DriverBusSession.id == session_id)
+    )
     return result.scalar_one_or_none()
 
 
 async def end_session(db: AsyncSession, session_id: int) -> DriverBusSession | None:
-    result = await db.execute(select(DriverBusSession).where(DriverBusSession.id == session_id))
+    result = await db.execute(
+        select(DriverBusSession).where(DriverBusSession.id == session_id)
+    )
     session = result.scalar_one_or_none()
     if not session:
         return None
     session.status = "ended"
-    session.logout_at = datetime.now(timezone.utc)
+    session.logout_at = datetime.now(UTC)
     await db.flush()
     await db.refresh(session)
     return session

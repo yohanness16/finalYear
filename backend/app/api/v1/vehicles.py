@@ -2,6 +2,7 @@
 
 import re
 import time
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,22 +12,22 @@ from app.crud import route as crud_route
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
 from app.models.vehicle import Vehicle
-from app.services.cv_engine import estimate_density
 from app.schemas.vehicle import (
+    LivePositionsEnvelope,
+    TelemetryInput,
     VehicleAdminUpdate,
     VehicleCreate,
     VehiclePosition,
     VehicleResponse,
-    TelemetryInput,
-    LivePositionsEnvelope,
 )
+from app.services.cv_engine import estimate_density
 
 router = APIRouter(tags=["vehicles"])
 
 
 def _default_plate_from_device_id(device_id: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9]", "", device_id).upper()
-    tail = (cleaned[-8:] if cleaned else "BUS00001")
+    tail = cleaned[-8:] if cleaned else "BUS00001"
     return f"ESP-{tail}"[:20]
 
 
@@ -83,7 +84,9 @@ async def get_vehicle_position(vehicle_id: int, db: AsyncSession = Depends(get_d
 
 
 @router.get("/vehicles", response_model=list[VehicleResponse])
-async def list_vehicles(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def list_vehicles(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+):
     vehicles = await crud_vehicle.get_vehicles(db, skip, limit)
     return [_vehicle_to_response(v) for v in vehicles]
 
@@ -139,13 +142,15 @@ async def receive_telemetry(
     if data.pixel_count is not None:
         occupancy_level = estimate_density(data.pixel_count)
 
-    await crud_vehicle.update_position(db, vehicle.id, data.lat, data.lon, data.speed or 0)
+    await crud_vehicle.update_position(
+        db, vehicle.id, data.lat, data.lon, data.speed or 0
+    )
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.services.live_broadcast import broadcast_vehicle_position
 
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.now(UTC).timestamp()
     await broadcast_vehicle_position(
         vehicle.id,
         vehicle.plate_number,
@@ -186,4 +191,3 @@ async def _save_raw_telemetry(
     await crud_tracking.create_raw_telemetry(
         db, vehicle_id, lat, lon, pixel_count, raw_payload
     )
-

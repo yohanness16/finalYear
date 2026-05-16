@@ -60,7 +60,9 @@ async def test_driver_login_creates_bus_session(monkeypatch, override_db_depende
 
     monkeypatch.setattr(auth.crud_user, "get_user_by_username", _get_user)
     monkeypatch.setattr(auth.crud_vehicle, "get_vehicle_by_device_id", _get_vehicle)
-    monkeypatch.setattr(auth.crud_driver_session, "get_active_session_for_driver", _no_active)
+    monkeypatch.setattr(
+        auth.crud_driver_session, "get_active_session_for_driver", _no_active
+    )
     monkeypatch.setattr(auth.crud_driver_session, "create_session", _create_session)
 
     bus_token = auth.jwt.encode(
@@ -107,17 +109,23 @@ async def test_driver_logout_closes_session(
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/api/v1/auth/driver-logout", json={"session_id": 88})
+        response = await client.post(
+            "/api/v1/auth/driver-logout", json={"session_id": 88}
+        )
 
     assert response.status_code == 200
     assert response.json() == {"status": "logged_out", "session_id": 88}
 
 
 @pytest.mark.asyncio
-async def test_bus_dashboard_login_requires_configured_password(monkeypatch, override_db_dependency):
+async def test_bus_dashboard_login_requires_configured_password(
+    monkeypatch, override_db_dependency
+):
     from app.api.v1 import auth
 
-    vehicle = SimpleNamespace(id=9, device_id="IMEI-90909", dashboard_password_hash=None)
+    vehicle = SimpleNamespace(
+        id=9, device_id="IMEI-90909", dashboard_password_hash=None
+    )
 
     async def _get_vehicle(*args, **kwargs):
         return vehicle

@@ -1,6 +1,6 @@
 """Tracking and telemetry schemas."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -11,9 +11,9 @@ class TelemetryInput(BaseModel):
     device_id: str
     lat: float
     lon: float
-    speed: Optional[float] = None
-    pixel_count: Optional[int] = None
-    raw_payload: Optional[dict[str, Any]] = None
+    speed: float | None = None
+    pixel_count: int | None = None
+    raw_payload: dict[str, Any] | None = None
 
 
 class BusLiveState(BaseModel):

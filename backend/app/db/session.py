@@ -6,7 +6,6 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
-from app.db.base import Base
 
 settings = get_settings()
 
@@ -16,7 +15,9 @@ if "postgresql+asyncpg" not in database_url:
     # This handles both 'postgresql://' and 'postgresql+psycopg2://'
     database_url = database_url.replace("postgresql", "postgresql+asyncpg", 1)
     # Just in case you had +psycopg2 in there, let's clean it up
-    database_url = database_url.replace("postgresql+asyncpg+psycopg2", "postgresql+asyncpg")
+    database_url = database_url.replace(
+        "postgresql+asyncpg+psycopg2", "postgresql+asyncpg"
+    )
 if database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 

@@ -10,9 +10,9 @@ from sqlalchemy.orm import selectinload
 
 from app.core.security import RequireAdmin
 from app.crud import assignment as crud_assignment
+from app.crud import route as crud_route
 from app.crud import user as crud_user
 from app.crud import vehicle as crud_vehicle
-from app.crud import route as crud_route
 from app.db.session import get_db
 from app.models.assignment import Assignment
 
@@ -80,10 +80,14 @@ async def start_assignment(
         raise HTTPException(404, "Vehicle not found")
     if not await crud_route.get_route_by_id(db, body.route_id):
         raise HTTPException(404, "Route not found")
-    existing = await crud_assignment.get_active_assignment_by_vehicle(db, body.vehicle_id)
+    existing = await crud_assignment.get_active_assignment_by_vehicle(
+        db, body.vehicle_id
+    )
     if existing:
         raise HTTPException(409, "Vehicle already has an active assignment")
-    a = await crud_assignment.create_assignment(db, body.driver_id, body.vehicle_id, body.route_id)
+    a = await crud_assignment.create_assignment(
+        db, body.driver_id, body.vehicle_id, body.route_id
+    )
     res = await db.execute(
         select(Assignment)
         .where(Assignment.id == a.id)

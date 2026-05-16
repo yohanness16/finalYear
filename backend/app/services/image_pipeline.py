@@ -14,24 +14,22 @@ This decouples the slow CV analysis from the HTTP response so IoT devices
 get sub-100ms responses even when image processing takes 1-3 seconds.
 """
 
-import json
-import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
-from app.crud import vehicle as crud_vehicle
-from app.crud import tracking as crud_tracking
 from app.crud import assignment as crud_assignment
 from app.crud import route as crud_route
+from app.crud import tracking as crud_tracking
+from app.crud import vehicle as crud_vehicle
 from app.services.cv_engine import analyze_bus_density_from_image
-from app.services.redis_cache import set_bus_live_pipeline, get_last_coords
+from app.services.live_broadcast import broadcast_cv_result, broadcast_vehicle_position
+from app.services.redis_cache import get_last_coords, set_bus_live_pipeline
 from app.services.route_eta import estimate_route_stop_eta_payloads
 from app.services.route_validation import find_nearest_stop, is_on_route
-from app.services.live_broadcast import broadcast_vehicle_position, broadcast_cv_result
-from app.utils.gps_validation import is_valid_coord, get_average_coord
+from app.utils.gps_validation import get_average_coord, is_valid_coord
 from app.utils.redis_client import set_route_stop_etas
 
 
@@ -47,7 +45,7 @@ async def _store_image(image_bytes: bytes, image_name: str | None) -> tuple[str,
         if 1 < len(ext) <= 10:
             suffix = ext
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     unique = uuid.uuid4().hex[:8]
     filename = f"esp32_{stamp}_{unique}{suffix}"
     out_path = out_dir / filename
@@ -59,8 +57,13 @@ async def _store_image(image_bytes: bytes, image_name: str | None) -> tuple[str,
         return "", False
 
 
-async def _resolve_vehicle(db, device_id: str, plate_number: str | None,
-                           bus_type: str | None, capacity: int | None):
+async def _resolve_vehicle(
+    db,
+    device_id: str,
+    plate_number: str | None,
+    bus_type: str | None,
+    capacity: int | None,
+):
     """
     Resolve vehicle identity from device_id.
 
@@ -70,7 +73,6 @@ async def _resolve_vehicle(db, device_id: str, plate_number: str | None,
 
     Raises ValueError if plate conflict detected.
     """
-    from app.models.vehicle import Vehicle
 
     existing = await crud_vehicle.get_vehicle_by_device_id(db, device_id)
 
@@ -92,6 +94,7 @@ async def _resolve_vehicle(db, device_id: str, plate_number: str | None,
 
     # Auto-provision new vehicle
     import re
+
     cleaned = re.sub(r"[^A-Za-z0-9]", "", device_id).upper()
     tail = cleaned[-8:] if cleaned else "BUS00001"
     target_plate = plate_number or f"ESP-{tail}"[:20]
@@ -113,7 +116,9 @@ async def _resolve_vehicle(db, device_id: str, plate_number: str | None,
     return vehicle, True
 
 
-async def _validate_gps(lat: float, lon: float, plate: str, route_stops: list) -> tuple[float, float, str | None]:
+async def _validate_gps(
+    lat: float, lon: float, plate: str, route_stops: list
+) -> tuple[float, float, str | None]:
     """
     Validate GPS coordinates.
 
@@ -178,7 +183,10 @@ async def process_esp32_telemetry(
     # ── Step 1: Resolve vehicle identity ──
     try:
         vehicle, created = await _resolve_vehicle(
-            db, device_id, plate_number, bus_type,
+            db,
+            device_id,
+            plate_number,
+            bus_type,
             capacity=bus_capacity if bus_capacity > 0 else None,
         )
     except ValueError as exc:
@@ -225,6 +233,7 @@ async def process_esp32_telemetry(
     # Fallback: if density is 0 but people detected, use people-count-based estimate
     if occupancy_level == 0 and cv_result["people_count"] > 0:
         from app.services.cv_engine import estimate_density_from_people_count
+
         occupancy_level = estimate_density_from_people_count(
             cv_result["people_count"], capacity_for_cv
         )
@@ -281,6 +290,7 @@ async def process_esp32_telemetry(
     # ── Step 6b: Store detailed CV result in Redis ──
     try:
         from app.services.redis_cache import update_cv_result
+
         await update_cv_result(
             plate=vehicle.plate_number,
             occupancy_level=occupancy_level,
@@ -334,7 +344,7 @@ async def process_esp32_telemetry(
                 pass
 
     # ── Step 10: Broadcast to WebSocket admins ──
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.now(UTC).timestamp()
 
     # Broadcast position update with occupancy
     await broadcast_vehicle_position(

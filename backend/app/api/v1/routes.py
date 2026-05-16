@@ -22,7 +22,6 @@ async def create_stop(
     current_user: RequireAdmin,
     stop: StopCreate,
     db: AsyncSession = Depends(get_db),
-   
 ):
     return await crud_route.create_stop(
         db,
@@ -36,7 +35,9 @@ async def create_stop(
 
 
 @router.get("/stops", response_model=list[StopResponse])
-async def list_stops(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def list_stops(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+):
     return await crud_route.get_stops(db, skip, limit)
 
 
@@ -50,17 +51,18 @@ async def get_stop(stop_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/routes", response_model=RouteResponse)
 async def create_route(
-     current_user: RequireAdmin,
+    current_user: RequireAdmin,
     route: RouteCreate,
     db: AsyncSession = Depends(get_db),
-   
 ):
     direction = (route.direction or "forward").strip().lower()
     if direction not in {"forward", "reverse"}:
         raise HTTPException(400, "Direction must be 'forward' or 'reverse'")
     if await crud_route.get_route_by_number(db, route.route_number, direction):
         raise HTTPException(400, "Route number already exists for this direction")
-    stop_sequence = [(s.stop_id, s.sequence_order) for s in route.stops] if route.stops else None
+    stop_sequence = (
+        [(s.stop_id, s.sequence_order) for s in route.stops] if route.stops else None
+    )
     return await crud_route.create_route(
         db,
         route.route_number,
@@ -73,7 +75,9 @@ async def create_route(
 
 
 @router.get("/routes", response_model=list[RouteResponse])
-async def list_routes(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def list_routes(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+):
     return await crud_route.get_routes(db, skip, limit)
 
 

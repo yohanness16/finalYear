@@ -1,8 +1,5 @@
 """Request validation middleware — body size limits, content-type enforcement, method checks."""
 
-import json
-from typing import Set
-
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -23,20 +20,20 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     # Max body sizes by content type (bytes)
     MAX_BODY_SIZES = {
-        "application/json": 1_048_576,        # 1 MB
+        "application/json": 1_048_576,  # 1 MB
         "application/x-www-form-urlencoded": 524_288,  # 512 KB
-        "multipart/form-data": 10_485_760,     # 10 MB (for image uploads)
-        "text/plain": 262_144,                 # 256 KB
+        "multipart/form-data": 10_485_760,  # 10 MB (for image uploads)
+        "text/plain": 262_144,  # 256 KB
     }
 
     # Default max for unknown content types
     DEFAULT_MAX_BODY = 524_288  # 512 KB
 
     # Methods that require Content-Type header
-    METHODS_REQUIRE_CONTENT_TYPE: Set[str] = {"POST", "PUT", "PATCH"}
+    METHODS_REQUIRE_CONTENT_TYPE: set[str] = {"POST", "PUT", "PATCH"}
 
     # Allowed content types for API
-    ALLOWED_CONTENT_TYPES: Set[str] = {
+    ALLOWED_CONTENT_TYPES: set[str] = {
         "application/json",
         "application/x-www-form-urlencoded",
         "multipart/form-data",
@@ -45,14 +42,16 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     }
 
     # Paths exempt from body size limits (e.g., image upload endpoints)
-    BODY_LIMIT_EXEMPT_PATHS: Set[str] = {
+    BODY_LIMIT_EXEMPT_PATHS: set[str] = {
         "/api/v1/gateway",
     }
 
     async def dispatch(self, request: Request, call_next):
         method = request.method
         path = request.url.path
-        content_type = request.headers.get("content-type", "").lower().split(";")[0].strip()
+        content_type = (
+            request.headers.get("content-type", "").lower().split(";")[0].strip()
+        )
         content_length = request.headers.get("content-length")
 
         # Block non-standard HTTP methods

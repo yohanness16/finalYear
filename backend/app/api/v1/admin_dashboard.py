@@ -1,22 +1,22 @@
 """Admin dashboard: charts, analytics, settings toggle."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select , text
+from pydantic import BaseModel
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import RequireAdmin
 from app.crud import system_settings as crud_settings
 from app.db.session import get_db
 from app.models.assignment import Assignment
+from app.models.model_performance import ModelPerformance
 from app.models.raw_telemetry import RawTelemetry
 from app.models.route import Route
 from app.models.trip_history import TripHistory
-from app.models.model_performance import ModelPerformance
-from app.models.vehicle import Vehicle
 from app.models.user import User
-from pydantic import BaseModel
+from app.models.vehicle import Vehicle
 
 router = APIRouter()
 
@@ -31,7 +31,7 @@ async def dashboard_summary(
     db: AsyncSession = Depends(get_db),
 ):
     """Counts: active assignments, vehicles, routes, users, raw_telemetry (last 24h)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
     active = await db.execute(
         select(func.count(Assignment.id)).where(Assignment.status == "active")
     )
@@ -57,7 +57,7 @@ async def assignments_over_time(
     db: AsyncSession = Depends(get_db),
 ):
     """Assignments per day (last N days)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     result = await db.execute(
         select(func.date(Assignment.start_time).label("day"), func.count(Assignment.id))
         .where(Assignment.start_time >= cutoff)
@@ -115,7 +115,7 @@ async def route_usage(
     db: AsyncSession = Depends(get_db),
 ):
     """Trips per route (last N days)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     result = await db.execute(
         select(Route.route_number, func.count(Assignment.id))
         .join(Assignment, Assignment.route_id == Route.id)
@@ -127,18 +127,19 @@ async def route_usage(
     return {"labels": [r[0] for r in rows], "data": [r[1] for r in rows]}
 
 
-
 @router.get("/admin/dashboard/telemetry-volume")
 async def telemetry_volume(
     current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db),
 ):
     """Telemetry count per hour (last 24h)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
+
     # We define the expression once to ensure consistency
     # We use text("'hour'") to force it as a literal string, not a parameter
-    hour_col = func.date_trunc(text("'hour'"), RawTelemetry.timestamp).label("hour_bucket")
+    hour_col = func.date_trunc(text("'hour'"), RawTelemetry.timestamp).label(
+        "hour_bucket"
+    )
 
     result = await db.execute(
         select(
@@ -149,15 +150,17 @@ async def telemetry_volume(
         .group_by(text("hour_bucket"))  # Group by the label we just created
         .order_by(text("hour_bucket"))
     )
-    
+
     rows = result.all()
     # Note: Use r.hour_bucket or r[0] to access the data
     return {"labels": [str(r[0]) for r in rows], "data": [r[1] for r in rows]}
 
+
 @router.get("/admin/ml/status")
 async def ml_status(current_user: RequireAdmin):
     """ML model loaded status and version."""
-    from app.services.ai_predictor import model_loaded, get_model_version
+    from app.services.ai_predictor import get_model_version, model_loaded
+
     return {"model_loaded": model_loaded(), "model_version": get_model_version()}
 
 
@@ -168,6 +171,7 @@ async def trigger_cleanup(
 ):
     """Run data retention cleanup (raw_telemetry, trip_history)."""
     from app.tasks.cleanup import run_cleanup
+
     counts = await run_cleanup(db)
     return counts
 
@@ -230,7 +234,6 @@ async def eta_preview(
 async def get_admin_settings(
     current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db),
-    
 ):
     """Get runtime settings (use_ml_for_prod, etc)."""
     use_ml = await crud_settings.get_use_ml_for_prod(db)
@@ -242,8 +245,9 @@ async def update_settings(
     current_user: RequireAdmin,
     body: SettingsUpdateBody,
     db: AsyncSession = Depends(get_db),
-    
 ):
     """Update use_ml_for_prod (admin only)."""
-    await crud_settings.set_setting(db, "use_ml_for_prod", "true" if body.use_ml_for_prod else "false")
+    await crud_settings.set_setting(
+        db, "use_ml_for_prod", "true" if body.use_ml_for_prod else "false"
+    )
     return {"use_ml_for_prod": body.use_ml_for_prod}

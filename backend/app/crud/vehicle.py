@@ -1,6 +1,6 @@
 """Vehicle CRUD operations."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,17 +37,18 @@ async def get_vehicle_by_plate(db: AsyncSession, plate_number: str) -> Vehicle |
     return result.scalar_one_or_none()
 
 
-async def get_vehicles(db: AsyncSession, skip: int = 0, limit: int = 100) -> list[Vehicle]:
+async def get_vehicles(
+    db: AsyncSession, skip: int = 0, limit: int = 100
+) -> list[Vehicle]:
     result = await db.execute(
-        select(Vehicle)
-        .options(selectinload(Vehicle.route))
-        .offset(skip)
-        .limit(limit)
+        select(Vehicle).options(selectinload(Vehicle.route)).offset(skip).limit(limit)
     )
     return list(result.scalars().all())
 
 
-async def get_vehicle_with_positions(db: AsyncSession, vehicle_id: int) -> Vehicle | None:
+async def get_vehicle_with_positions(
+    db: AsyncSession, vehicle_id: int
+) -> Vehicle | None:
     return await get_vehicle_by_id(db, vehicle_id)
 
 
@@ -74,7 +75,7 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
     )
     rows = result.all()
     out: dict[str, dict] = {}
-    now_ts = datetime.now(timezone.utc).timestamp()
+    now_ts = datetime.now(UTC).timestamp()
     for vid, plate, lat, lon, speed, route_id, pos_at, assignment_id in rows:
         if lat is None or lon is None:
             continue
@@ -118,7 +119,7 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
     vid, plate, lat, lon, speed, route_id, pos_at, assignment_id = row
     if lat is None or lon is None:
         return None
-    ts = pos_at.timestamp() if pos_at else datetime.now(timezone.utc).timestamp()
+    ts = pos_at.timestamp() if pos_at else datetime.now(UTC).timestamp()
     return {
         "vehicle_id": vid,
         "plate_number": plate,
@@ -144,7 +145,7 @@ async def update_position(
     vehicle.last_lat = lat
     vehicle.last_lon = lon
     vehicle.speed = speed
-    vehicle.position_updated_at = datetime.now(timezone.utc)
+    vehicle.position_updated_at = datetime.now(UTC)
     await db.flush()
 
 

@@ -20,7 +20,9 @@ async def get_route_stops_ordered(db: AsyncSession, route_id: int) -> list[Stop]
 
 async def get_route_by_id(db: AsyncSession, route_id: int) -> Route | None:
     result = await db.execute(
-        select(Route).where(Route.id == route_id).options(selectinload(Route.route_stops).selectinload(RouteStop.stop))
+        select(Route)
+        .where(Route.id == route_id)
+        .options(selectinload(Route.route_stops).selectinload(RouteStop.stop))
     )
     return result.scalar_one_or_none()
 
@@ -73,7 +75,9 @@ async def get_nearest_stops(
     return stops[: max(1, int(limit))]
 
 
-async def get_routes_through_stops(db: AsyncSession, start_stop_id: int, end_stop_id: int) -> list[Route]:
+async def get_routes_through_stops(
+    db: AsyncSession, start_stop_id: int, end_stop_id: int
+) -> list[Route]:
     """Find routes containing both stops in either order."""
     result = await db.execute(
         select(Route)

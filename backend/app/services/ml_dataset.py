@@ -15,7 +15,11 @@ from app.models.route import Route, RouteStop
 from app.models.stop import Stop
 from app.models.trip_history import TripHistory
 from app.services.eta_calc import calculate_eta_heuristic, haversine_meters
-from app.services.ml_features import build_feature_dict, build_feature_vector, time_features
+from app.services.ml_features import (
+    build_feature_dict,
+    build_feature_vector,
+    time_features,
+)
 
 
 class RouteMaps:
@@ -23,8 +27,12 @@ class RouteMaps:
         self.route_id = int(route.id)
         stops = [rs for rs in (route.route_stops or []) if rs.stop is not None]
         stops_sorted = sorted(stops, key=lambda rs: rs.sequence_order)
-        self.order_to_stop: dict[int, Stop] = {rs.sequence_order: rs.stop for rs in stops_sorted}
-        self.stop_to_order: dict[int, int] = {rs.stop_id: rs.sequence_order for rs in stops_sorted}
+        self.order_to_stop: dict[int, Stop] = {
+            rs.sequence_order: rs.stop for rs in stops_sorted
+        }
+        self.stop_to_order: dict[int, int] = {
+            rs.stop_id: rs.sequence_order for rs in stops_sorted
+        }
         self.stop_count = len(stops_sorted)
 
     def get_prev_stop(self, stop_id: int) -> Stop | None:
@@ -88,10 +96,14 @@ async def build_training_rows(db: AsyncSession) -> list[dict[str, Any]]:
                 prev = entry
                 continue
 
-            actual_segment = max(1, int((entry.arrival_time - prev.arrival_time).total_seconds()))
+            actual_segment = max(
+                1, int((entry.arrival_time - prev.arrival_time).total_seconds())
+            )
             occupancy = int(entry.occupancy_level or 0)
             hour, dow, is_peak = time_features(entry.arrival_time)
-            distance_m = haversine_meters(prev_stop.lat, prev_stop.lon, entry.stop.lat, entry.stop.lon)
+            distance_m = haversine_meters(
+                prev_stop.lat, prev_stop.lon, entry.stop.lat, entry.stop.lon
+            )
             heuristic_eta = calculate_eta_heuristic(
                 prev_stop.lat,
                 prev_stop.lon,

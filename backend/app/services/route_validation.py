@@ -1,9 +1,10 @@
 """On-route validation for bus telemetry."""
 
-from typing import List, Optional
 from app.models.stop import Stop
 from app.utils.gps_validation import haversine_meters
-def find_nearest_stop(lat: float, lon: float, stops: List[Stop]) -> Optional[Stop]:
+
+
+def find_nearest_stop(lat: float, lon: float, stops: list[Stop]) -> Stop | None:
     """Find the nearest stop to given coordinates."""
     if not stops:
         return None
@@ -11,10 +12,12 @@ def find_nearest_stop(lat: float, lon: float, stops: List[Stop]) -> Optional[Sto
         stops,
         key=lambda s: haversine_meters(lat, lon, s.lat, s.lon),
     )
+
+
 def is_on_route(
     lat: float,
     lon: float,
-    route_stops: List[Stop],
+    route_stops: list[Stop],
     max_off_route_m: float = 200.0,
 ) -> bool:
     """Check if the coordinate is reasonably close to any stop on the route."""

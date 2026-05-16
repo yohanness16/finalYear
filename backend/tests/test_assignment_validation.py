@@ -1,6 +1,9 @@
 """Assignment validation: reject duplicate driver/vehicle."""
 
-from app.crud.assignment import get_active_assignment_by_driver, get_active_assignment_by_vehicle
+from app.crud.assignment import (
+    get_active_assignment_by_driver,
+    get_active_assignment_by_vehicle,
+)
 
 
 def test_crud_functions_exist():

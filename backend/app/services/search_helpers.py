@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Sequence
+from collections.abc import Sequence
 
 from app.models.stop import Stop
 from app.utils.gps_validation import haversine_meters
@@ -36,7 +36,9 @@ def compute_live_eta(eta_seconds: float | int, computed_at: float | int) -> int 
     return max(0, int(round(eta - elapsed)))
 
 
-def infer_bus_direction(coords: Sequence[dict[str, float]], stops: Sequence[Stop]) -> int | None:
+def infer_bus_direction(
+    coords: Sequence[dict[str, float]], stops: Sequence[Stop]
+) -> int | None:
     """Infer direction from recent coords: 1 forward, -1 reverse, None unknown."""
     if len(coords) < 2 or not stops:
         return None
@@ -54,15 +56,23 @@ def infer_bus_direction(coords: Sequence[dict[str, float]], stops: Sequence[Stop
 
     if curr_idx < len(stops) - 1:
         next_stop = stops[curr_idx + 1]
-        curr_next = haversine_meters(float(curr["lat"]), float(curr["lon"]), next_stop.lat, next_stop.lon)
-        prev_next = haversine_meters(float(prev["lat"]), float(prev["lon"]), next_stop.lat, next_stop.lon)
+        curr_next = haversine_meters(
+            float(curr["lat"]), float(curr["lon"]), next_stop.lat, next_stop.lon
+        )
+        prev_next = haversine_meters(
+            float(prev["lat"]), float(prev["lon"]), next_stop.lat, next_stop.lon
+        )
         if curr_next < prev_next:
             return 1
 
     if curr_idx > 0:
         prev_stop = stops[curr_idx - 1]
-        curr_prev = haversine_meters(float(curr["lat"]), float(curr["lon"]), prev_stop.lat, prev_stop.lon)
-        prev_prev = haversine_meters(float(prev["lat"]), float(prev["lon"]), prev_stop.lat, prev_stop.lon)
+        curr_prev = haversine_meters(
+            float(curr["lat"]), float(curr["lon"]), prev_stop.lat, prev_stop.lon
+        )
+        prev_prev = haversine_meters(
+            float(prev["lat"]), float(prev["lon"]), prev_stop.lat, prev_stop.lon
+        )
         if curr_prev < prev_prev:
             return -1
 

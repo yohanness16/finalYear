@@ -23,11 +23,15 @@ async def test_get_crowd_density_success():
     with patch("app.api.v1.crowd.get_cv_result", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = cv_data
         with patch("app.core.security.get_current_user", new_callable=AsyncMock):
-            with patch("app.crud.user.get_user_by_id", new_callable=AsyncMock) as mock_user:
+            with patch(
+                "app.crud.user.get_user_by_id", new_callable=AsyncMock
+            ) as mock_user:
                 mock_user.return_value = None  # Will be overridden by RequireAdmin
 
                 transport = ASGITransport(app=app)
-                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                async with AsyncClient(
+                    transport=transport, base_url="http://test"
+                ) as client:
                     # This will fail auth but tests the route exists
                     response = client.get(
                         "/api/v1/admin/crowd/TEST-001",

@@ -69,7 +69,7 @@ async def websocket_live(
                     continue
                 if data.get("type") == "ping":
                     await websocket.send_json({"type": "pong"})
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
         pass

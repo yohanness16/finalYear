@@ -52,14 +52,12 @@ def _count_people_in_frame(frame) -> int:
     if len(rects) == 0:
         return 0
 
-    boxes = rects.tolist() if hasattr(rects, "tolist") else [list(rect) for rect in rects]
+    boxes = (
+        rects.tolist() if hasattr(rects, "tolist") else [list(rect) for rect in rects]
+    )
     scores = weights.tolist() if hasattr(weights, "tolist") else list(weights)
     scores = [float(weight) for weight in scores]
-    filtered = [
-        box
-        for box, score in zip(boxes, scores)
-        if score >= 0.2
-    ]
+    filtered = [box for box, score in zip(boxes, scores) if score >= 0.2]
     if not filtered:
         return 0
 
@@ -234,7 +232,9 @@ def estimate_density(pixel_count: int, total_pixels: int = 10000) -> int:
     return 2
 
 
-def estimate_density_from_people_count(people_count: int, bus_capacity: int | None = None) -> int:
+def estimate_density_from_people_count(
+    people_count: int, bus_capacity: int | None = None
+) -> int:
     if bus_capacity and bus_capacity > 0:
         load_ratio = people_count / bus_capacity
         if load_ratio < 0.3:
@@ -250,7 +250,9 @@ def estimate_density_from_people_count(people_count: int, bus_capacity: int | No
     return 2
 
 
-def analyze_bus_density_from_image(image_bytes: bytes, bus_capacity: int | None = None) -> dict[str, object]:
+def analyze_bus_density_from_image(
+    image_bytes: bytes, bus_capacity: int | None = None
+) -> dict[str, object]:
     """Analyze an ESP32-CAM frame and return a structured crowd estimate.
 
     The live path prefers human detections, but also uses a foreground-based
@@ -292,7 +294,9 @@ def analyze_bus_density_from_image(image_bytes: bytes, bus_capacity: int | None 
     density_from_people = estimate_density_from_people_count(people_count, bus_capacity)
     density_from_ratio = _estimate_density_from_foreground_ratio(foreground_ratio)
     density_from_brightness = _estimate_density_from_brightness(img)
-    crowd_density = max(density_from_people, density_from_ratio, density_from_brightness)
+    crowd_density = max(
+        density_from_people, density_from_ratio, density_from_brightness
+    )
 
     confidence = 0.25
     if hog_count > 0:

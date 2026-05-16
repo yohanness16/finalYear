@@ -1,12 +1,11 @@
 """JWT creation, validation, and role-based access dependencies."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -21,9 +20,13 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 
-def create_access_token(subject: str | int, expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    subject: str | int, expires_delta: timedelta | None = None
+) -> str:
     """Create JWT access token with subject (user id) and optional expiry."""
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(UTC) + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     payload = {"sub": str(subject), "exp": expire, "type": "access"}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
@@ -56,10 +59,14 @@ async def get_current_user(
         )
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+        )
     user = await get_user_by_id(db, int(user_id))
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
     return user
 
 

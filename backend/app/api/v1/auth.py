@@ -1,13 +1,12 @@
 """Authentication endpoints: register, login, Google OAuth, email verification, password reset."""
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import JWTError, jwt
-
-from app.core.limiter import limiter
-from app.core.config import get_settings
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
+from app.core.limiter import limiter
 from app.core.security import ALGORITHM, create_access_token, get_current_user
 from app.crud import driver_bus_session as crud_driver_session
 from app.crud import user as crud_user
@@ -29,7 +28,10 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.user import UserResponse
-from app.services.email_service import send_password_reset_email, send_verification_email
+from app.services.email_service import (
+    send_password_reset_email,
+    send_verification_email,
+)
 from app.services.token_service import (
     consume_email_verify_token,
     consume_password_reset_token,
@@ -42,9 +44,12 @@ router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 settings = get_settings()
 
+
 @router.post("/auth/register", response_model=UserResponse)
 @limiter.limit("10/minute")
-async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)
+):
     """Passenger signup with email and password. Sends verification email."""
     if await crud_user.get_user_by_username(db, body.username):
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -52,7 +57,11 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
         raise HTTPException(status_code=400, detail="Email already registered")
     password_hash = pwd_context.hash(body.password)
     user = await crud_user.create_user(
-        db, body.username, body.email, password_hash=password_hash, role="passenger",
+        db,
+        body.username,
+        body.email,
+        password_hash=password_hash,
+        role="passenger",
         is_verified=False,
     )
     # Send verification email (non-blocking failure)
@@ -63,27 +72,35 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
 
 @router.post("/auth/login", response_model=TokenResponse)
 @limiter.limit("20/minute")
-async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)
+):
     """Email/password login. Returns JWT."""
     user = await crud_user.get_user_by_username(db, body.username)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user.password_hash:
-        raise HTTPException(status_code=401, detail="Use Google sign-in for this account")
+        raise HTTPException(
+            status_code=401, detail="Use Google sign-in for this account"
+        )
     if not pwd_context.verify(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(user.id)
-    
+
     # You MUST return both fields for the Bearer handshake to work
     return TokenResponse(access_token=token, token_type="bearer")
 
 
 @router.post("/auth/google", response_model=TokenResponse)
 @limiter.limit("20/minute")
-async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+async def google_auth(
+    request: Request, body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)
+):
     """Google OAuth: verify ID token, create or login user."""
     import httpx
+
     from app.core.config import get_settings
+
     settings = get_settings()
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=503, detail="Google OAuth not configured")
@@ -149,7 +166,9 @@ async def driver_login(
     if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if user.role not in {"driver", "admin"}:
-        raise HTTPException(status_code=403, detail="Only driver/admin accounts are allowed")
+        raise HTTPException(
+            status_code=403, detail="Only driver/admin accounts are allowed"
+        )
     if not pwd_context.verify(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -158,7 +177,9 @@ async def driver_login(
         raise HTTPException(status_code=404, detail="Vehicle not registered")
 
     try:
-        payload = jwt.decode(body.bus_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            body.bus_token, settings.SECRET_KEY, algorithms=[ALGORITHM]
+        )
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid bus token")
     if payload.get("type") != "bus_dashboard":
@@ -193,7 +214,9 @@ async def driver_logout(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     if session.driver_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not allowed to logout this session")
+        raise HTTPException(
+            status_code=403, detail="Not allowed to logout this session"
+        )
 
     await crud_driver_session.end_session(db, body.session_id)
     return {"status": "logged_out", "session_id": body.session_id}
@@ -213,7 +236,9 @@ async def bus_dashboard_login(
 
     password_hash = getattr(vehicle, "dashboard_password_hash", None)
     if not password_hash:
-        raise HTTPException(status_code=400, detail="Bus dashboard password is not configured")
+        raise HTTPException(
+            status_code=400, detail="Bus dashboard password is not configured"
+        )
 
     if not pwd_context.verify(body.password, password_hash):
         raise HTTPException(status_code=401, detail="Invalid bus dashboard credentials")
@@ -230,11 +255,15 @@ async def bus_dashboard_login(
 
 @router.post("/auth/verify-email")
 @limiter.limit("10/minute")
-async def verify_email(request: Request, body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
+async def verify_email(
+    request: Request, body: VerifyEmailRequest, db: AsyncSession = Depends(get_db)
+):
     """Verify email address using token from email link."""
     user_id = await consume_email_verify_token(body.token)
     if not user_id:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired verification token"
+        )
     user = await crud_user.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -246,7 +275,11 @@ async def verify_email(request: Request, body: VerifyEmailRequest, db: AsyncSess
 
 @router.post("/auth/resend-verification")
 @limiter.limit("5/minute")
-async def resend_verification(request: Request, body: ResendVerificationRequest, db: AsyncSession = Depends(get_db)):
+async def resend_verification(
+    request: Request,
+    body: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """Resend verification email to an unverified user."""
     user = await crud_user.get_user_by_email(db, body.email)
     if not user:
@@ -261,7 +294,9 @@ async def resend_verification(request: Request, body: ResendVerificationRequest,
 
 @router.post("/auth/forgot-password")
 @limiter.limit("5/minute")
-async def forgot_password(request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(
+    request: Request, body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+):
     """Send password reset email. Always returns success to prevent email enumeration."""
     user = await crud_user.get_user_by_email(db, body.email)
     if user and user.password_hash:
@@ -273,7 +308,9 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Asy
 
 @router.post("/auth/reset-password")
 @limiter.limit("5/minute")
-async def reset_password(request: Request, body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(
+    request: Request, body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
     """Reset password using token from email link."""
     user_id = await consume_password_reset_token(body.token)
     if not user_id:

@@ -1,8 +1,8 @@
 """IP blocklist manager — add, remove, and query blocked IPs."""
 
 import ipaddress
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 from app.core.config import get_settings
 
@@ -48,7 +48,7 @@ def add_ip(ip: str, reason: str = "manual", permanent: bool = True) -> bool:
     if any(entry["ip"] == ip for entry in existing):
         return True
 
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     entry = f"{ip} # {reason} | {timestamp}"
     if not permanent:
         entry += " | temp"
@@ -140,12 +140,14 @@ def list_blocked() -> list[dict]:
             if len(segments) > 2 and "temp" in segments[2].lower():
                 permanent = False
 
-        entries.append({
-            "ip": ip,
-            "reason": reason,
-            "timestamp": timestamp,
-            "permanent": permanent,
-        })
+        entries.append(
+            {
+                "ip": ip,
+                "reason": reason,
+                "timestamp": timestamp,
+                "permanent": permanent,
+            }
+        )
 
     return entries
 

@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 SIM_DIR = Path(__file__).resolve().parents[1] / "simulation"
 sys.path.insert(0, str(SIM_DIR))
 
+from api_client import APIClient  # noqa: E402
 from gps_utils import haversine_m, interpolate_gps  # noqa: E402
 from route_loader import stops_from_route_detail  # noqa: E402
-from api_client import APIClient  # noqa: E402
 
 
 def test_interpolate_gps_point_count():

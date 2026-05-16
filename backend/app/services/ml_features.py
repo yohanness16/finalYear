@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Tuple
 
 FEATURE_NAMES = [
     "route_id",
@@ -30,7 +29,7 @@ def is_peak_hour(hour: int) -> int:
     return 0
 
 
-def time_features(ts: datetime | None) -> Tuple[int, int, int]:
+def time_features(ts: datetime | None) -> tuple[int, int, int]:
     """Return hour, day_of_week, is_peak_hour."""
     now = ts or datetime.now()
     hour = int(now.hour)
@@ -51,7 +50,7 @@ def build_feature_dict(
     is_peak: int,
     occupancy_level: int,
     heuristic_eta: float,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Return a feature dict aligned with FEATURE_NAMES."""
     return {
         "route_id": float(route_id),
@@ -69,6 +68,6 @@ def build_feature_dict(
     }
 
 
-def build_feature_vector(features: Dict[str, float]) -> list[float]:
+def build_feature_vector(features: dict[str, float]) -> list[float]:
     """Return ordered feature vector for model inference."""
     return [float(features.get(name, 0.0)) for name in FEATURE_NAMES]

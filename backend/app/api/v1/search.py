@@ -13,16 +13,27 @@ from app.schemas.tracking import GeoJourneySearch, PointToPointSearch
 from app.services.geocoding import geocode_text
 from app.services.redis_cache import get_last_coords as get_recent_coords
 from app.services.route_eta import estimate_route_stop_eta_payloads
-from app.services.search_helpers import compute_live_eta, infer_bus_direction, nearest_stop_index
+from app.services.search_helpers import (
+    compute_live_eta,
+    infer_bus_direction,
+    nearest_stop_index,
+)
 from app.utils.gps_validation import haversine_meters
 from app.utils.redis_client import bus_live_key, get_redis
 
 router = APIRouter()
 
 
-async def _resolve_point(label: str, query: str | None, lat: float | None, lon: float | None) -> dict:
+async def _resolve_point(
+    label: str, query: str | None, lat: float | None, lon: float | None
+) -> dict:
     if lat is not None and lon is not None:
-        return {"lat": float(lat), "lon": float(lon), "provider": "coords", "label": label}
+        return {
+            "lat": float(lat),
+            "lon": float(lon),
+            "provider": "coords",
+            "label": label,
+        }
     if query:
         resolved = await geocode_text(query)
         if resolved:
@@ -43,7 +54,9 @@ async def point_to_point_search(
     end = await crud_route.get_stop_by_id(db, body.end_stop_id)
     if not start or not end:
         raise HTTPException(404, "Stop not found")
-    routes = await crud_route.get_routes_through_stops(db, body.start_stop_id, body.end_stop_id)
+    routes = await crud_route.get_routes_through_stops(
+        db, body.start_stop_id, body.end_stop_id
+    )
     redis = None
     try:
         redis = await get_redis()
@@ -59,7 +72,9 @@ async def point_to_point_search(
             except Exception:
                 data = {}
         if data:
-            live_eta = compute_live_eta(data.get("eta_seconds", 0), data.get("computed_at", 0))
+            live_eta = compute_live_eta(
+                data.get("eta_seconds", 0), data.get("computed_at", 0)
+            )
             if live_eta is not None:
                 data["eta_live_seconds"] = live_eta
         if data:
@@ -78,10 +93,14 @@ async def journey_search(
     settings = get_settings()
     max_age_seconds = int(settings.LIVE_POSITION_MAX_AGE_SECONDS or 0)
 
-    start_point = await _resolve_point("start", body.start_query, body.start_lat, body.start_lon)
+    start_point = await _resolve_point(
+        "start", body.start_query, body.start_lat, body.start_lon
+    )
     end_point = await _resolve_point("end", body.end_query, body.end_lat, body.end_lon)
 
-    start_stop = await crud_route.get_nearest_stop(db, start_point["lat"], start_point["lon"])
+    start_stop = await crud_route.get_nearest_stop(
+        db, start_point["lat"], start_point["lon"]
+    )
     end_stop = await crud_route.get_nearest_stop(db, end_point["lat"], end_point["lon"])
     if not start_stop or not end_stop:
         raise HTTPException(404, "No stops found near the provided locations")
@@ -157,7 +176,9 @@ async def journey_search(
                 except Exception:
                     occupancy_level = 0
 
-            eta_stops = route_stops if forward_direction else list(reversed(route_stops))
+            eta_stops = (
+                route_stops if forward_direction else list(reversed(route_stops))
+            )
             eta_payloads = estimate_route_stop_eta_payloads(
                 float(lat),
                 float(lon),
@@ -174,7 +195,9 @@ async def journey_search(
                 eta_seconds = float(eta_data.get("eta_seconds", 0))
             except (TypeError, ValueError):
                 eta_seconds = 0.0
-            live_eta = compute_live_eta(eta_data.get("eta_seconds", 0), eta_data.get("computed_at", 0))
+            live_eta = compute_live_eta(
+                eta_data.get("eta_seconds", 0), eta_data.get("computed_at", 0)
+            )
 
             route_buses.append(
                 {
@@ -217,7 +240,14 @@ async def journey_search(
             "lon": start_point["lon"],
             "stop_id": start_stop.id,
             "stop_name": start_stop.name,
-            "distance_m": int(haversine_meters(start_point["lat"], start_point["lon"], start_stop.lat, start_stop.lon)),
+            "distance_m": int(
+                haversine_meters(
+                    start_point["lat"],
+                    start_point["lon"],
+                    start_stop.lat,
+                    start_stop.lon,
+                )
+            ),
         },
         "end": {
             "query": body.end_query,
@@ -225,7 +255,11 @@ async def journey_search(
             "lon": end_point["lon"],
             "stop_id": end_stop.id,
             "stop_name": end_stop.name,
-            "distance_m": int(haversine_meters(end_point["lat"], end_point["lon"], end_stop.lat, end_stop.lon)),
+            "distance_m": int(
+                haversine_meters(
+                    end_point["lat"], end_point["lon"], end_stop.lat, end_stop.lon
+                )
+            ),
         },
         "routes": response_routes,
     }

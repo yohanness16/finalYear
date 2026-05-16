@@ -1,6 +1,6 @@
 """Tests for ETA calculation."""
 
-from app.services.eta_calc import haversine_meters, calculate_eta_heuristic
+from app.services.eta_calc import calculate_eta_heuristic, haversine_meters
 
 
 def test_haversine():

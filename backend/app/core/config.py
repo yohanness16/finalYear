@@ -1,7 +1,6 @@
 """Application settings loaded from environment variables."""
 
 from functools import lru_cache
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -22,15 +21,15 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # AWS (optional for IoT Core)
-    AWS_REGION: Optional[str] = "eu-central-1"
-    AWS_IOT_ENDPOINT: Optional[str] = None
+    AWS_REGION: str | None = "eu-central-1"
+    AWS_IOT_ENDPOINT: str | None = None
 
     # App
     SECRET_KEY: str = "change-me-in-production"
     USE_ML_FOR_PROD: bool = False
 
     # Google OAuth
-    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_ID: str | None = None
 
     # Data retention (days)
     RAW_TELEMETRY_RETENTION_DAYS: int = 30
@@ -40,10 +39,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
 
     # Google Maps (ETA)
-    GOOGLE_MAPS_API_KEY: Optional[str] = None
+    GOOGLE_MAPS_API_KEY: str | None = None
 
     # FCM (notifications)
-    FCM_SERVER_KEY: Optional[str] = None
+    FCM_SERVER_KEY: str | None = None
 
     # Redis TTL (seconds)
     BUS_LIVE_TTL: int = 600  # 10 min
@@ -67,9 +66,9 @@ class Settings(BaseSettings):
     FIREWALL_BURST_WINDOW_SECONDS: int = 10
 
     # Request validation
-    MAX_JSON_BODY_BYTES: int = 1_048_576       # 1 MB
+    MAX_JSON_BODY_BYTES: int = 1_048_576  # 1 MB
     MAX_MULTIPART_BODY_BYTES: int = 10_485_760  # 10 MB
-    MAX_FORM_BODY_BYTES: int = 524_288          # 512 KB
+    MAX_FORM_BODY_BYTES: int = 524_288  # 512 KB
 
     # HSTS max-age in seconds (1 year)
     HSTS_MAX_AGE: int = 31_536_000

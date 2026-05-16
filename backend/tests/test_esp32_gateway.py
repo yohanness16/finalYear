@@ -1,7 +1,7 @@
 """ESP32 gateway telemetry tests."""
 
-from pathlib import Path
 import uuid
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient

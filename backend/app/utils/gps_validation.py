@@ -1,7 +1,6 @@
 """GPS outlier detection using last 5 points buffer."""
 
 import math
-from typing import Optional
 
 # Max plausible distance (meters) between consecutive pings for a moving bus
 # ~100 km/h = ~28 m/s, so 5 sec interval = ~140m. Use 500m as safety margin.
@@ -34,15 +33,17 @@ def is_valid_coord(
         return True
     last = last_coords[0]
     dist = haversine_meters(
-        last["lat"], last["lon"],
-        new_lat, new_lon,
+        last["lat"],
+        last["lon"],
+        new_lat,
+        new_lon,
     )
     return dist <= MAX_PLAUSIBLE_DELTA_M
 
 
 def get_average_coord(
     coords: list[dict[str, float]],
-) -> Optional[tuple[float, float]]:
+) -> tuple[float, float] | None:
     """Return average lat/lon from list of coords (for fallback on outlier)."""
     if not coords:
         return None

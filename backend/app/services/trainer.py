@@ -15,7 +15,9 @@ from app.services.ml_features import FEATURE_NAMES
 MIN_SAMPLES = 50
 
 
-async def train_from_db(db: AsyncSession, model_path: Path | None = None) -> tuple[bool, str]:
+async def train_from_db(
+    db: AsyncSession, model_path: Path | None = None
+) -> tuple[bool, str]:
     """
     Pull trip_history, train RandomForest with feature engineering, save to .joblib.
     Returns (success, message).

@@ -3,15 +3,15 @@
 Uses Redis for O(1) token lookups with automatic expiry.
 """
 
-import secrets
 import json
-from datetime import datetime, timezone
+import secrets
+from datetime import UTC, datetime
 
 from app.utils.redis_client import get_redis
 
 # Token TTLs
-EMAIL_VERIFY_TTL = 86400    # 24 hours
-PASSWORD_RESET_TTL = 3600   # 1 hour
+EMAIL_VERIFY_TTL = 86400  # 24 hours
+PASSWORD_RESET_TTL = 3600  # 1 hour
 
 
 async def create_email_verify_token(user_id: int) -> str:
@@ -20,7 +20,7 @@ async def create_email_verify_token(user_id: int) -> str:
     r = await get_redis()
     await r.set(
         f"email_verify:{token}",
-        json.dumps({"user_id": user_id, "created_at": datetime.now(timezone.utc).isoformat()}),
+        json.dumps({"user_id": user_id, "created_at": datetime.now(UTC).isoformat()}),
         ex=EMAIL_VERIFY_TTL,
     )
     return token
@@ -51,7 +51,7 @@ async def create_password_reset_token(user_id: int) -> str:
         await r.delete(f"pwd_reset:{old_token}")
     await r.set(
         f"pwd_reset:{token}",
-        json.dumps({"user_id": user_id, "created_at": datetime.now(timezone.utc).isoformat()}),
+        json.dumps({"user_id": user_id, "created_at": datetime.now(UTC).isoformat()}),
         ex=PASSWORD_RESET_TTL,
     )
     await r.set(f"pwd_reset_user:{user_id}", token, ex=PASSWORD_RESET_TTL)

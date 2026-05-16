@@ -18,7 +18,12 @@ async def add_favorite(body: FavoriteCreate, db: AsyncSession = Depends(get_db))
     db.add(fav)
     await db.flush()
     await db.refresh(fav)
-    return {"id": fav.id, "user_id": body.user_id, "route_id": body.route_id, "nickname": body.nickname}
+    return {
+        "id": fav.id,
+        "user_id": body.user_id,
+        "route_id": body.route_id,
+        "nickname": body.nickname,
+    }
 
 
 @router.get("/favorites/{user_id}")
@@ -45,5 +50,7 @@ async def add_rating(body: RatingCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/ratings/{assignment_id}")
 async def list_ratings(assignment_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Rating).where(Rating.assignment_id == assignment_id))
+    result = await db.execute(
+        select(Rating).where(Rating.assignment_id == assignment_id)
+    )
     return list(result.scalars().all())

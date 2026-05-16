@@ -1,7 +1,7 @@
 """Redis caching helpers for last-known positions and route stops."""
 
 import json
-from typing import Any, List, Optional
+from typing import Any
 
 import redis.asyncio as redis
 
@@ -9,10 +9,9 @@ from app.core.config import get_settings
 
 _settings = get_settings()
 
+
 def _build_redis_kwargs(url: str) -> dict:
-    kwargs = {
-        "decode_responses": True
-    }
+    kwargs = {"decode_responses": True}
 
     if url.startswith("rediss://"):
         import ssl
@@ -22,7 +21,10 @@ def _build_redis_kwargs(url: str) -> dict:
 
     return kwargs
 
-redis_cache = redis.from_url(_settings.REDIS_URL, **_build_redis_kwargs(_settings.REDIS_URL))
+
+redis_cache = redis.from_url(
+    _settings.REDIS_URL, **_build_redis_kwargs(_settings.REDIS_URL)
+)
 
 COORD_HISTORY_MAX = 5
 HIST_KEY = "veh:hist:{plate}"
@@ -33,7 +35,7 @@ async def connect_redis() -> None:
     await redis_cache.ping()
 
 
-async def get_route_stops(db: Any, route_id: int) -> List[Any]:
+async def get_route_stops(db: Any, route_id: int) -> list[Any]:
     """Stops for route validation (from DB)."""
     from app.crud import route as crud_route
 
@@ -42,7 +44,7 @@ async def get_route_stops(db: Any, route_id: int) -> List[Any]:
     return await crud_route.get_route_stops_ordered(db, route_id)
 
 
-async def get_cached_route_stops(route_id: str) -> List[Any]:
+async def get_cached_route_stops(route_id: str) -> list[Any]:
     """Legacy alias."""
     return []
 
@@ -80,14 +82,17 @@ async def set_bus_live_pipeline(
         pipe.ltrim(key_hist, 0, COORD_HISTORY_MAX - 1)
         pipe.expire(key_hist, ttl)
         # CV result hash — stores crowd density for live queries
-        pipe.hset(key_cv, mapping={
-            "occupancy_level": str(occupancy),
-            "people_count": "0",
-            "crowd_density": str(occupancy),
-            "confidence": "0",
-            "method": "unknown",
-            "updated_at": str(int(__import__("time").time())),
-        })
+        pipe.hset(
+            key_cv,
+            mapping={
+                "occupancy_level": str(occupancy),
+                "people_count": "0",
+                "crowd_density": str(occupancy),
+                "confidence": "0",
+                "method": "unknown",
+                "updated_at": str(int(__import__("time").time())),
+            },
+        )
         pipe.expire(key_cv, ttl)
         # Redis Stream for live consumers
         pipe.xadd(
@@ -115,14 +120,18 @@ async def update_cv_result(
     """Update the CV result hash for a vehicle after image analysis."""
     key_cv = f"veh:cv:{plate}"
     import time as _time
-    await redis_cache.hset(key_cv, mapping={
-        "occupancy_level": str(occupancy_level),
-        "people_count": str(people_count),
-        "crowd_density": str(crowd_density),
-        "confidence": str(confidence),
-        "method": method,
-        "updated_at": str(int(_time.time())),
-    })
+
+    await redis_cache.hset(
+        key_cv,
+        mapping={
+            "occupancy_level": str(occupancy_level),
+            "people_count": str(people_count),
+            "crowd_density": str(crowd_density),
+            "confidence": str(confidence),
+            "method": method,
+            "updated_at": str(int(_time.time())),
+        },
+    )
     await redis_cache.expire(key_cv, ttl)
 
 

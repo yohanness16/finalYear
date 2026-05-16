@@ -7,12 +7,10 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import assignment as crud_assignment
 from app.crud.tracking import create_raw_telemetry
 from app.db.session import AsyncSessionLocal
-from app.main import app
 from app.models.raw_telemetry import RawTelemetry
 from app.models.route import Route
 from app.models.user import User
@@ -23,7 +21,9 @@ from app.utils.gps_validation import is_valid_coord
 class TestBusGPSTracking:
     """Test bus-GPS integration and per-bus tracking."""
 
-    def _unique_vehicle(self, prefix: str, bus_type: str = "Anbessa", capacity: int = 60):
+    def _unique_vehicle(
+        self, prefix: str, bus_type: str = "Anbessa", capacity: int = 60
+    ):
         suffix = uuid4().hex[:8]
         return Vehicle(
             plate_number=f"{prefix}-{suffix[:5]}",
@@ -110,10 +110,14 @@ class TestBusGPSTracking:
                 raw_lon=38.7520,
             )
 
-            is_outlier = not is_valid_coord(10.0, 40.0, [{"lat": 9.0320, "lon": 38.7520}])
+            is_outlier = not is_valid_coord(
+                10.0, 40.0, [{"lat": 9.0320, "lon": 38.7520}]
+            )
             assert is_outlier is True
 
-            is_valid = is_valid_coord(9.0350, 38.7550, [{"lat": 9.0320, "lon": 38.7520}])
+            is_valid = is_valid_coord(
+                9.0350, 38.7550, [{"lat": 9.0320, "lon": 38.7520}]
+            )
             assert is_valid is True
 
     async def test_bus_assignment_gps_tracking(self):

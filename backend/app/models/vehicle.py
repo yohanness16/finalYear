@@ -1,6 +1,6 @@
 """Vehicle model for physical buses."""
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Float, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -22,8 +22,7 @@ class Vehicle(Base):
     # Live position fields (updated via telemetry)
     last_lat = Column(Float, nullable=True)
     last_lon = Column(Float, nullable=True)
-    
-    
+
     speed = Column(Float, nullable=True)
     position_updated_at = Column(DateTime(timezone=True), nullable=True)
 

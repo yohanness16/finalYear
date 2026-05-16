@@ -12,7 +12,9 @@ router = APIRouter()
 
 
 @router.post("/notifications/settings")
-async def set_notification(body: NotificationSettingCreate, db: AsyncSession = Depends(get_db)):
+async def set_notification(
+    body: NotificationSettingCreate, db: AsyncSession = Depends(get_db)
+):
     ns = NotificationSetting(
         user_id=body.user_id,
         route_id=body.route_id,
@@ -26,5 +28,7 @@ async def set_notification(body: NotificationSettingCreate, db: AsyncSession = D
 
 @router.get("/notifications/settings/{user_id}")
 async def get_notification_settings(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(NotificationSetting).where(NotificationSetting.user_id == user_id))
+    result = await db.execute(
+        select(NotificationSetting).where(NotificationSetting.user_id == user_id)
+    )
     return list(result.scalars().all())

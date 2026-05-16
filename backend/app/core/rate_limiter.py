@@ -26,11 +26,11 @@ class RateTier(Enum):
 
 # Tier configuration: (max_requests, window_seconds)
 TIER_CONFIG: dict[RateTier, tuple[int, int]] = {
-    RateTier.STRICT: (10, 60),        # 10 requests per minute
-    RateTier.STANDARD: (60, 60),      # 60 requests per minute
-    RateTier.RELAXED: (120, 60),      # 120 requests per minute
-    RateTier.IOT: (300, 60),          # 300 requests per minute
-    RateTier.WEBSOCKET: (5, 60),      # 5 connections per minute
+    RateTier.STRICT: (10, 60),  # 10 requests per minute
+    RateTier.STANDARD: (60, 60),  # 60 requests per minute
+    RateTier.RELAXED: (120, 60),  # 120 requests per minute
+    RateTier.IOT: (300, 60),  # 300 requests per minute
+    RateTier.WEBSOCKET: (5, 60),  # 5 connections per minute
 }
 
 # Path prefix -> tier mapping

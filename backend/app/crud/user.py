@@ -1,7 +1,6 @@
 """User CRUD operations."""
 
-from sqlalchemy import delete, select, update
-from sqlalchemy import or_
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -26,10 +25,12 @@ async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None
     result = await db.execute(select(User).where(User.google_id == google_id))
     return result.scalar_one_or_none()
 
+
 async def get_all_users(db: AsyncSession):
     """Fetch all users from the database."""
     result = await db.execute(select(User))
     return result.scalars().all()
+
 
 async def get_users_by_role(db: AsyncSession, role: str):
     """Fetch users filtered by a specific role (e.g., 'driver', 'admin')."""
@@ -50,27 +51,26 @@ async def search_users(db: AsyncSession, query: str):
     )
     return result.scalars().all()
 
+
 async def delete_user(db: AsyncSession, user_id: int):
     """Permanently remove a user by ID."""
     await db.execute(delete(User).where(User.id == user_id))
     await db.commit()
 
+
 async def update_user(db: AsyncSession, user_id: int, **kwargs):
     """Update user fields dynamically based on provided arguments."""
     # Filter out None values to avoid overwriting with nulls unintentionally
     update_data = {k: v for k, v in kwargs.items() if v is not None}
-    
+
     if update_data:
-        await db.execute(
-            update(User)
-            .where(User.id == user_id)
-            .values(**update_data)
-        )
+        await db.execute(update(User).where(User.id == user_id).values(**update_data))
         await db.commit()
-    
+
     # Return the updated user object
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
+
 
 async def create_user(
     db: AsyncSession,

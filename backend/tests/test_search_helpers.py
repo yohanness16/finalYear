@@ -1,5 +1,5 @@
-from app.services.search_helpers import infer_bus_direction, nearest_stop_index
 from app.models.stop import Stop
+from app.services.search_helpers import infer_bus_direction, nearest_stop_index
 
 
 def test_nearest_stop_index():

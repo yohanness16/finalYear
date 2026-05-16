@@ -1,6 +1,6 @@
 """GPS outlier rejection tests."""
 
-from app.utils.gps_validation import is_valid_coord, haversine_meters, get_average_coord
+from app.utils.gps_validation import get_average_coord, haversine_meters, is_valid_coord
 
 
 def test_haversine_meters():

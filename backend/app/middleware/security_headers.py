@@ -26,27 +26,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     HSTS_MAX_AGE = 31536000
 
     # Content-Security-Policy for API (restrictive — APIs serve JSON, not HTML)
-    CSP_POLICY = (
-        "default-src 'none'; "
-        "frame-ancestors 'none'; "
-        "base-uri 'none'; "
-        "form-action 'none'"
-    )
+    CSP_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 
     # Referrer policy: no referrer for API responses
     REFERRER_POLICY = "no-referrer"
 
     # Permissions policy: disable all browser features for API
-    PERMISSIONS_POLICY = (
-        "accelerometer=(), "
-        "camera=(), "
-        "geolocation=(), "
-        "gyroscope=(), "
-        "magnetometer=(), "
-        "microphone=(), "
-        "payment=(), "
-        "usb=()"
-    )
+    PERMISSIONS_POLICY = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
 
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
@@ -80,7 +66,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Prevent caching of API responses
         if request.url.path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Cache-Control"] = (
+                "no-store, no-cache, must-revalidate, max-age=0"
+            )
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 

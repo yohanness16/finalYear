@@ -1,6 +1,6 @@
 """Raw telemetry - bronze layer for unprocessed hardware data."""
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, Text
+from sqlalchemy import Column, Float, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

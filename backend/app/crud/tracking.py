@@ -1,8 +1,7 @@
 """Tracking and telemetry CRUD operations."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.assignment import Assignment
@@ -68,13 +67,13 @@ async def create_trip_history_from_assignment(
     """Create a trip-history sample for ML training from live telemetry."""
     from app.services.eta_calc import calculate_eta_heuristic
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start_time = assignment.start_time
     if start_time is None:
         actual_travel_time = 0
     else:
         if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=timezone.utc)
+            start_time = start_time.replace(tzinfo=UTC)
         actual_travel_time = max(1, int((now - start_time).total_seconds()))
 
     heuristic_eta = int(

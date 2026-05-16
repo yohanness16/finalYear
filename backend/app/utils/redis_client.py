@@ -1,21 +1,21 @@
 """Redis connection and helper functions for live state."""
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as redis
+
 from app.core.config import get_settings
 
 settings = get_settings()
 
-_redis_client: Optional[redis.Redis] = None
+_redis_client: redis.Redis | None = None
 
 
 def _build_redis_kwargs(url: str) -> dict:
     """Build kwargs for redis.from_url, handling Upstash TLS (rediss://)."""
     kwargs: dict = {"encoding": "utf-8", "decode_responses": True}
     if url.startswith("rediss://"):
-        import ssl
         kwargs["ssl"] = True
         kwargs["ssl_cert_reqs"] = "none"
     return kwargs
@@ -53,7 +53,9 @@ def route_stop_key(route_no: str, stop_id: int) -> str:
     return f"route:{route_no}:stop:{stop_id}"
 
 
-async def set_route_stop_etas(route_number: str, payloads: dict[int, dict[str, Any]], ttl: int = 300) -> None:
+async def set_route_stop_etas(
+    route_number: str, payloads: dict[int, dict[str, Any]], ttl: int = 300
+) -> None:
     """Store the latest ETA snapshot for each stop on a route."""
     if not payloads:
         return
@@ -136,11 +138,16 @@ async def set_bus_live_pipeline(
     pipe.lpush(coords_key, coord)
     pipe.ltrim(coords_key, 0, 4)
     pipe.expire(coords_key, settings.BUS_LIVE_TTL)
-    pipe.hset(live_key, mapping={
-        "lat": str(lat), "lon": str(lon), "speed": "0",
-        "occupancy_level": str(occupancy_level), "assignment_id": str(assignment_id),
-    })
+    pipe.hset(
+        live_key,
+        mapping={
+            "lat": str(lat),
+            "lon": str(lon),
+            "speed": "0",
+            "occupancy_level": str(occupancy_level),
+            "assignment_id": str(assignment_id),
+        },
+    )
     pipe.expire(live_key, settings.BUS_LIVE_TTL)
     pipe.geoadd("active_buses", (lon, lat, plate_number))
     await pipe.execute()
-

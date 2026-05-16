@@ -1,12 +1,11 @@
 """WebSocket connection manager for live bus updates."""
 
 from fastapi import WebSocket
-from typing import List
 
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()

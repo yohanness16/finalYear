@@ -1,11 +1,13 @@
 """Auth tests: register, login, token validation."""
 
-import pytest
 import uuid
+
+import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.main import app
 from app.core.security import create_access_token, decode_token
+from app.main import app
+
 
 # Helper to generate unique data so tests don't clash in the DB
 @pytest.fixture
@@ -14,8 +16,9 @@ def unique_user():
     return {
         "username": f"user_{uid}",
         "email": f"test_{uid}@example.com",
-        "password": "secret12345"
+        "password": "secret12345",
     }
+
 
 def test_create_and_decode_token():
     token = create_access_token(1)
@@ -42,11 +45,11 @@ async def test_register_and_login(unique_user):
             "/api/v1/auth/register",
             json=unique_user,
         )
-        
+
         # If this fails, print the error message from the server
         if r.status_code != 200:
             print(f"Registration failed: {r.json()}")
-            
+
         assert r.status_code == 200
         data = r.json()
         assert data["username"] == unique_user["username"]
@@ -57,8 +60,8 @@ async def test_register_and_login(unique_user):
         r2 = await client.post(
             "/api/v1/auth/login",
             json={
-                "username": unique_user["username"], 
-                "password": unique_user["password"]
+                "username": unique_user["username"],
+                "password": unique_user["password"],
             },
         )
         assert r2.status_code == 200

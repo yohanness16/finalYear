@@ -1,6 +1,6 @@
 """Regression tests for trip-history persistence from telemetry."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -63,7 +63,7 @@ async def test_trip_history_sample_is_created():
             vehicle_id=vehicle.id,
             route_id=route.id,
         )
-        assignment.start_time = datetime.now(timezone.utc) - timedelta(seconds=125)
+        assignment.start_time = datetime.now(UTC) - timedelta(seconds=125)
         await db_session.flush()
 
         entry = await create_trip_history_from_assignment(
