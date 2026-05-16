@@ -16,7 +16,6 @@ def _build_redis_kwargs(url: str) -> dict:
     """Build kwargs for redis.from_url, handling Upstash TLS (rediss://)."""
     kwargs: dict = {"encoding": "utf-8", "decode_responses": True}
     if url.startswith("rediss://"):
-        kwargs["ssl"] = True
         kwargs["ssl_cert_reqs"] = "none"
     return kwargs
 
