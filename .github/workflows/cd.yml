@@ -73,7 +73,8 @@ jobs:
           ruff check app/ --output-format=github
 
       - name: Run migrations
-        run: alembic -c migrations/alembic.ini upgrade head
+        run: |
+          alembic upgrade head
 
       - name: Run tests
         run: |
