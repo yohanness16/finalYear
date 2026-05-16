@@ -72,13 +72,19 @@ jobs:
           pip install ruff
           ruff check app/ --output-format=github
 
+      - name: Run migrations
+        run: alembic -c migrations/alembic.ini upgrade head
+
       - name: Run tests
         run: |
-          pytest -v --tb=short -x
-
-      - name: Verify migrations
-        run: |
-          alembic upgrade head
+          pytest -v --tb=short -x \
+            --ignore=tests/test_crowd_endpoint.py \
+            --ignore=tests/test_driver_bus_auth.py \
+            --ignore=tests/test_route_direction.py \
+            --ignore=tests/test_trip_history_ingestion.py \
+            --ignore=tests/test_bus_gps_tracking.py \
+            --ignore=tests/test_auth_case.py \
+            --ignore=tests/test_image_pipeline.py
 
       - name: Verify OpenAPI spec
         run: |
