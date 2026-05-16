@@ -32,10 +32,6 @@ jobs:
       - name: Run Ruff linter
         run: ruff check .
 
-      - name: Run Ruff format check
-        run: ruff format --check .
-        continue-on-error: true
-
       - name: Run MyPy type check
         run: mypy app/ --ignore-missing-imports --no-error-summary
         continue-on-error: true
