@@ -6,7 +6,7 @@
 
 project_name = "bustrack"
 environment  = "prod"
-location     = "eastus"
+location     = "southafricanorth"
 
 # B1 = basic tier (cheapest with always-on), P1v2 = production
 app_service_sku = "B1"
