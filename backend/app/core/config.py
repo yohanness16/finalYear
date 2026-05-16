@@ -12,7 +12,8 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-    )
+        env_file_override=False,
+)
 
     # Database
     DATABASE_URL: str = "postgresql://user:pass@localhost:5432/transport_db"
