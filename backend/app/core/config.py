@@ -46,20 +46,15 @@ class Settings(BaseSettings):
     FCM_SERVER_KEY: str | None = None
 
     # Redis TTL (seconds)
-    BUS_LIVE_TTL: int = 600  # 10 min
-    ROUTE_STOP_TTL: int = 300  # 5 min
+    BUS_LIVE_TTL: int = 600
+    ROUTE_STOP_TTL: int = 300
 
     # Live position age cutoff (seconds)
     LIVE_POSITION_MAX_AGE_SECONDS: int = 180
 
     # --- Security ---
-    # Allowed CORS origins (comma-separated). "*" = allow all (dev only).
     CORS_ORIGINS: str = "*"
-
-    # Firewall blocklist file path
     BLOCKLIST_PATH: str = "storage/firewall_blocklist.txt"
-
-    # Firewall anomaly thresholds
     FIREWALL_AUTO_BAN_THRESHOLD: int = 100
     FIREWALL_AUTO_BAN_WINDOW_SECONDS: int = 300
     FIREWALL_AUTO_BAN_DURATION_SECONDS: int = 3600
@@ -67,9 +62,9 @@ class Settings(BaseSettings):
     FIREWALL_BURST_WINDOW_SECONDS: int = 10
 
     # Request validation
-    MAX_JSON_BODY_BYTES: int = 1_048_576  # 1 MB
-    MAX_MULTIPART_BODY_BYTES: int = 10_485_760  # 10 MB
-    MAX_FORM_BODY_BYTES: int = 524_288  # 512 KB
+    MAX_JSON_BODY_BYTES: int = 1_048_576
+    MAX_MULTIPART_BODY_BYTES: int = 10_485_760
+    MAX_FORM_BODY_BYTES: int = 524_288
 
     # HSTS max-age in seconds (1 year)
     HSTS_MAX_AGE: int = 31_536_000
@@ -83,6 +78,7 @@ class Settings(BaseSettings):
     # --- Email (Resend) ---
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "noreply@bustrack.dpdns.org"
+
     # Base URL of the frontend app (for verification/reset links)
     APP_BASE_URL: str = "https://bustrack.dpdns.org"
 
