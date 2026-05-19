@@ -71,3 +71,5 @@ override.tf.json
 
 # ── Frontend (separate repo) ──
 ../bustrack-admin/
+.esp.ino
+esp.ino
