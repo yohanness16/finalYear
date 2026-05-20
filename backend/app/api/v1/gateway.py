@@ -1,6 +1,6 @@
 """Gateway endpoints for IoT devices with onboard camera support."""
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
@@ -13,7 +13,7 @@ router = APIRouter(tags=["gateway"])
 @router.post("/gateway/esp32/telemetry")
 @limiter.limit("300/minute")
 async def receive_esp32_telemetry(
-    request,
+    request: Request,
     device_id: str = Form(...),
     plate_number: str | None = Form(None),
     bus_type: str | None = Form(None),
