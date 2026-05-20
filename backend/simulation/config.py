@@ -6,7 +6,7 @@ Addis Ababa Public Transport Simulation
 import os
 
 # ── API Configuration ──────────────────────────────────────────────────────────
-BASE_URL = os.getenv("BUSTRACK_API_URL", "http://localhost:8000/api/v1")
+BASE_URL = os.getenv("BUSTRACK_API_URL", "https://api.bustrack.dpdns.org/api/v1")
 
 # ── Simulation Settings ────────────────────────────────────────────────────────
 SIMULATION_SPEED = 1.0          # 1.0 = real time, 2.0 = 2x faster
@@ -161,7 +161,7 @@ PASSENGERS = [
 
 # ── Admin Credentials (pre-existing) ──────────────────────────────────────────
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123456")
 
 
 def expand_fleet(extra: int) -> tuple[list[dict], list[dict]]:

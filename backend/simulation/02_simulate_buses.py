@@ -22,6 +22,7 @@ import random
 import argparse
 import threading
 from datetime import datetime
+from pathlib import Path
 
 from api_client import APIClient
 from config import (
@@ -34,12 +35,18 @@ from gps_utils import haversine_m, interpolate_gps
 from route_loader import fetch_route_stops
 
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+
 def load_state(filename: str = "simulation_state.json") -> dict:
+    state_path = Path(filename)
+    if not state_path.is_absolute():
+        state_path = SCRIPT_DIR / state_path
     try:
-        with open(filename) as f:
+        with open(state_path) as f:
             return json.load(f)
     except FileNotFoundError:
-        print(f"❌ {filename} not found. Run 01_setup.py first.")
+        print(f"❌ {state_path} not found. Run 01_setup.py first.")
         sys.exit(1)
 
 

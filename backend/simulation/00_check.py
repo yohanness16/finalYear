@@ -8,8 +8,12 @@ Usage:
 
 import sys
 import json
+from pathlib import Path
 from api_client import APIClient
 from config import BASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def ok(label: str, val=None):
@@ -60,7 +64,8 @@ def main():
     # ── 3. Check simulation state ──────────────────────────────────────────────
     print("\n▶ Checking simulation_state.json...")
     try:
-        with open("simulation_state.json") as f:
+        state_path = SCRIPT_DIR / "simulation_state.json"
+        with open(state_path) as f:
             state = json.load(f)
 
         drivers = [d for d in state.get("drivers", []) if d.get("id")]

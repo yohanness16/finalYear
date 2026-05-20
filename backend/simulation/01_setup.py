@@ -12,6 +12,7 @@ import argparse
 import sys
 import json
 import time
+from pathlib import Path
 from config import (
     ADMIN_USERNAME,
     ADMIN_PASSWORD,
@@ -22,6 +23,9 @@ from config import (
     expand_fleet,
 )
 from api_client import APIClient
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def banner(text: str):
@@ -228,9 +232,12 @@ def fetch_user_ids(admin: APIClient, drivers: list[dict]) -> dict:
 
 def save_state(data: dict, filename: str = "simulation_state.json"):
     """Save setup state to JSON for use by simulation scripts."""
-    with open(filename, "w") as f:
+    state_path = Path(filename)
+    if not state_path.is_absolute():
+        state_path = SCRIPT_DIR / state_path
+    with open(state_path, "w") as f:
         json.dump(data, f, indent=2)
-    print(f"\n  💾 State saved to {filename}")
+    print(f"\n  💾 State saved to {state_path}")
 
 
 def main():

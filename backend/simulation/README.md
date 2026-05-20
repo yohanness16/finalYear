@@ -32,7 +32,7 @@ pip install httpx pillow
 # 1. Set your admin credentials (or rely on defaults in config.py)
 export ADMIN_USERNAME=admin
 export ADMIN_PASSWORD=admin123
-export BUSTRACK_API_URL=http://localhost:8000/api/v1
+export BUSTRACK_API_URL=https://api.bustrack.dpdns.org/api/v1
 
 # 2. Check the API is running
 python 00_check.py
