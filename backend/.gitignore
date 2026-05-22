@@ -44,6 +44,7 @@ ml_reports/
 # ── Generated data ──
 abcd.txt
 asyncio
+cvtestimg/
 storage/
 delay_predictor.joblib
 openapi.json
