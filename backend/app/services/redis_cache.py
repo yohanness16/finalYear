@@ -1,38 +1,18 @@
-"""Redis caching helpers for last-known positions and route stops."""
+"""Redis caching helpers for last-known positions and route stops.
+
+Uses the shared redis_client.get_redis() connection so reads and writes
+go through the same pool — fixing the silent write-failure bug caused by
+maintaining two separate Redis clients.
+"""
 
 import json
+import time as _time
 from typing import Any
 
-import redis.asyncio as redis
-
-from app.core.config import get_settings
-
-_settings = get_settings()
-
-
-def _build_redis_kwargs(url: str) -> dict:
-    kwargs = {"decode_responses": True}
-
-    if url.startswith("rediss://"):
-        import ssl
-
-        kwargs["ssl"] = True
-        kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
-
-    return kwargs
-
-
-redis_cache = redis.from_url(
-    _settings.REDIS_URL, **_build_redis_kwargs(_settings.REDIS_URL)
-)
+from app.utils.redis_client import get_redis, bus_live_key, bus_coords_key
 
 COORD_HISTORY_MAX = 5
 HIST_KEY = "veh:hist:{plate}"
-
-
-async def connect_redis() -> None:
-    """Connect to Redis."""
-    await redis_cache.ping()
 
 
 async def get_route_stops(db: Any, route_id: int) -> list[Any]:
@@ -52,7 +32,8 @@ async def get_cached_route_stops(route_id: str) -> list[Any]:
 async def get_last_coords(plate: str) -> list[dict[str, float]]:
     """Recent coordinates newest-first (for GPS outlier checks)."""
     key = HIST_KEY.format(plate=plate)
-    raw_list = await redis_cache.lrange(key, 0, COORD_HISTORY_MAX - 1)
+    client = await get_redis()
+    raw_list = await client.lrange(key, 0, COORD_HISTORY_MAX - 1)
     out: list[dict[str, float]] = []
     for raw in raw_list:
         try:
@@ -74,9 +55,10 @@ async def set_bus_live_pipeline(
     """Update last position, coord history, occupancy hash, and push to live stream."""
     key_hist = HIST_KEY.format(plate=plate)
     key_cv = f"veh:cv:{plate}"
-    key_bus_live = f"bus:live:{plate}"
-    key_bus_coords = f"bus:coords:{plate}"
-    async with redis_cache.pipeline(transaction=True) as pipe:
+    key_bus_live = bus_live_key(plate)
+    key_bus_coords = bus_coords_key(plate)
+    client = await get_redis()
+    async with client.pipeline(transaction=True) as pipe:
         # Position (JSON array for backward compat)
         pipe.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
         # Coordinate history for GPS validation
@@ -107,7 +89,7 @@ async def set_bus_live_pipeline(
                 "crowd_density": str(occupancy),
                 "confidence": "0",
                 "method": "unknown",
-                "updated_at": str(int(__import__("time").time())),
+                "updated_at": str(int(_time.time())),
             },
         )
         pipe.expire(key_cv, ttl)
@@ -136,9 +118,8 @@ async def update_cv_result(
 ) -> None:
     """Update the CV result hash for a vehicle after image analysis."""
     key_cv = f"veh:cv:{plate}"
-    import time as _time
-
-    await redis_cache.hset(
+    client = await get_redis()
+    await client.hset(
         key_cv,
         mapping={
             "occupancy_level": str(occupancy_level),
@@ -149,13 +130,14 @@ async def update_cv_result(
             "updated_at": str(int(_time.time())),
         },
     )
-    await redis_cache.expire(key_cv, ttl)
+    await client.expire(key_cv, ttl)
 
 
 async def get_cv_result(plate: str) -> dict[str, Any] | None:
     """Get the latest CV result for a vehicle. Returns None if not found."""
     key_cv = f"veh:cv:{plate}"
-    data = await redis_cache.hgetall(key_cv)
+    client = await get_redis()
+    data = await client.hgetall(key_cv)
     if not data:
         return None
     return {
@@ -172,15 +154,18 @@ def set_last_position(plate: str, lat: float, lon: float, ttl: int = 300) -> Non
     import asyncio
 
     async def _set() -> None:
-        await redis_cache.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
+        client = await get_redis()
+        await client.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
 
     asyncio.create_task(_set())
 
 
 async def push_live_position(plate: str, payload: dict) -> None:
+    client = await get_redis()
     fields = {"plate": plate, **{k: str(v) for k, v in payload.items()}}
-    await redis_cache.xadd("pipe:positions", fields)
+    await client.xadd("pipe:positions", fields)
 
 
 async def close_redis_cache() -> None:
-    await redis_cache.aclose()
+    """No-op: connection is managed by redis_client.close_redis()."""
+    pass
