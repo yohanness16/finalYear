@@ -151,6 +151,7 @@ async def process_esp32_telemetry(
     lon: float,
     speed: float,
     bus_capacity: int,
+    occupancy_level: int | None,
     image_bytes: bytes,
     image_name: str | None,
     plate_number: str | None = None,
@@ -228,7 +229,12 @@ async def process_esp32_telemetry(
     # ── Step 4: CV analysis ──
     capacity_for_cv = bus_capacity or vehicle.capacity
     cv_result = analyze_bus_density_from_image(image_bytes, capacity_for_cv)
-    occupancy_level = int(cv_result["crowd_density"])
+    cv_occupancy_level = int(cv_result["crowd_density"])
+
+    if occupancy_level is None:
+        occupancy_level = cv_occupancy_level
+    else:
+        occupancy_level = max(0, min(2, int(occupancy_level)))
 
     # Fallback: if density is 0 but people detected, use people-count-based estimate
     if occupancy_level == 0 and cv_result["people_count"] > 0:
@@ -240,6 +246,7 @@ async def process_esp32_telemetry(
 
     result["occupancy_level"] = occupancy_level
     result["cv"] = cv_result
+    result["cv_occupancy_level"] = cv_occupancy_level
 
     # ── Step 5: Persist raw telemetry ──
     raw_payload = {
@@ -261,6 +268,7 @@ async def process_esp32_telemetry(
             "confidence": cv_result["confidence"],
             "foreground_ratio": cv_result["foreground_ratio"],
         },
+        "occupancy_level": occupancy_level,
     }
 
     await crud_tracking.create_raw_telemetry(

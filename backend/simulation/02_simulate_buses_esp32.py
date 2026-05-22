@@ -197,6 +197,7 @@ class ESP32BusSimulator:
                 "lon": str(lon),
                 "speed": str(round(speed_kmh, 2)),
                 "bus_capacity": str(capacity),
+                "occupancy_level": str(occupancy_level),
             }
 
             # Prepare file data
@@ -279,6 +280,9 @@ class ESP32BusSimulator:
 
         # Arrival at next stop
         self.update_occupancy_at_stop(stop_b)
+
+        # Send a stationary ping at the stop so the frontend sees a continuous update.
+        self.send_esp32_telemetry(stop_b["lat"], stop_b["lon"], 0.0, stop_b["name"])
 
     def run_loop(self) -> None:
         """Run one complete round trip."""

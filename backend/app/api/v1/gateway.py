@@ -21,6 +21,7 @@ async def receive_esp32_telemetry(
     lon: float = Form(...),
     speed: float = Form(0.0),
     bus_capacity: int = Form(0),
+    occupancy_level: int | None = Form(None),
     image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -46,6 +47,7 @@ async def receive_esp32_telemetry(
         lon=lon,
         speed=speed,
         bus_capacity=bus_capacity,
+        occupancy_level=occupancy_level,
         image_bytes=image_bytes,
         image_name=image.filename,
         plate_number=plate_number,
