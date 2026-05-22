@@ -74,6 +74,8 @@ async def set_bus_live_pipeline(
     """Update last position, coord history, occupancy hash, and push to live stream."""
     key_hist = HIST_KEY.format(plate=plate)
     key_cv = f"veh:cv:{plate}"
+    key_bus_live = f"bus:live:{plate}"
+    key_bus_coords = f"bus:coords:{plate}"
     async with redis_cache.pipeline(transaction=True) as pipe:
         # Position (JSON array for backward compat)
         pipe.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
@@ -81,6 +83,21 @@ async def set_bus_live_pipeline(
         pipe.lpush(key_hist, json.dumps({"lat": lat, "lon": lon}))
         pipe.ltrim(key_hist, 0, COORD_HISTORY_MAX - 1)
         pipe.expire(key_hist, ttl)
+        # Compatibility keys for live dashboard / direct Redis checks
+        pipe.lpush(key_bus_coords, json.dumps({"lat": lat, "lon": lon}))
+        pipe.ltrim(key_bus_coords, 0, COORD_HISTORY_MAX - 1)
+        pipe.expire(key_bus_coords, ttl)
+        pipe.hset(
+            key_bus_live,
+            mapping={
+                "lat": str(lat),
+                "lon": str(lon),
+                "speed": "0",
+                "occupancy_level": str(occupancy),
+                "assignment_id": str(assignment_id),
+            },
+        )
+        pipe.expire(key_bus_live, ttl)
         # CV result hash — stores crowd density for live queries
         pipe.hset(
             key_cv,
