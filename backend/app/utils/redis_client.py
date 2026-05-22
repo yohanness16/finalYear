@@ -7,7 +7,7 @@ Improvements:
 
 import json
 import logging
-import ssl
+
 from typing import Any
 
 import redis.asyncio as redis
