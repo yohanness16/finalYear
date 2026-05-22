@@ -118,7 +118,7 @@ class ESP32BusSimulator:
         }
 
         code, result = self.admin_client.post_status("/assignments/start", body)
-        if code == 201:
+        if code in (200, 201):
             self.assignment_id = result.get("id")
             self.log(f"✅ Trip started: {result.get('id')}")
             return True
@@ -134,7 +134,7 @@ class ESP32BusSimulator:
                         time.sleep(1)
 
             retry_code, retry_result = self.admin_client.post_status("/assignments/start", body)
-            if retry_code == 201:
+            if retry_code in (200, 201):
                 self.assignment_id = retry_result.get("id")
                 self.log(f"✅ Trip started (retry): {retry_result.get('id')}")
                 return True

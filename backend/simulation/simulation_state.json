@@ -4,61 +4,61 @@
       "username": "driver_tadesse",
       "email": "tadesse@bustrack.et",
       "password": "Pass@1234",
-      "id": 23
+      "id": 21
     },
     {
       "username": "driver_almaz",
       "email": "almaz@bustrack.et",
       "password": "Pass@1234",
-      "id": 24
+      "id": 22
     },
     {
       "username": "driver_kebede",
       "email": "kebede@bustrack.et",
       "password": "Pass@1234",
-      "id": 25
+      "id": 23
     },
     {
       "username": "driver_meron",
       "email": "meron@bustrack.et",
       "password": "Pass@1234",
-      "id": 26
+      "id": 24
     },
     {
       "username": "driver_girma",
       "email": "girma@bustrack.et",
       "password": "Pass@1234",
-      "id": 27
+      "id": 25
     },
     {
       "username": "driver_senait",
       "email": "senait@bustrack.et",
       "password": "Pass@1234",
-      "id": 28
+      "id": 26
     },
     {
       "username": "driver_yohannes",
       "email": "yohannes@bustrack.et",
       "password": "Pass@1234",
-      "id": 29
+      "id": 27
     },
     {
       "username": "driver_hana",
       "email": "hana@bustrack.et",
       "password": "Pass@1234",
-      "id": 30
+      "id": 28
     },
     {
       "username": "driver_bekele",
       "email": "bekele@bustrack.et",
       "password": "Pass@1234",
-      "id": 31
+      "id": 29
     },
     {
       "username": "driver_tigist",
       "email": "tigist@bustrack.et",
       "password": "Pass@1234",
-      "id": 32
+      "id": 30
     }
   ],
   "passengers": [
@@ -142,441 +142,313 @@
     {
       "plate_number": "AA-3-B12345",
       "device_id": "IMEI001234567890",
-      "id": 4
+      "id": 16
     },
     {
       "plate_number": "AA-3-C23456",
       "device_id": "IMEI002345678901",
-      "id": 5
+      "id": 17
     },
     {
       "plate_number": "AA-3-D34567",
       "device_id": "IMEI003456789012",
-      "id": 6
+      "id": 18
     },
     {
       "plate_number": "AA-3-E45678",
       "device_id": "IMEI004567890123",
-      "id": 7
+      "id": 19
     },
     {
       "plate_number": "AA-3-F56789",
       "device_id": "IMEI005678901234",
-      "id": 8
+      "id": 20
     },
     {
       "plate_number": "AA-3-G67890",
       "device_id": "IMEI006789012345",
-      "id": 9
+      "id": 21
     },
     {
       "plate_number": "AA-3-H78901",
       "device_id": "IMEI007890123456",
-      "id": 10
+      "id": 22
     },
     {
       "plate_number": "AA-3-I89012",
       "device_id": "IMEI008901234567",
-      "id": 11
+      "id": 23
     },
     {
       "plate_number": "AA-3-J90123",
       "device_id": "IMEI009012345678",
-      "id": 12
+      "id": 24
     },
     {
       "plate_number": "AA-3-K01234",
       "device_id": "IMEI010123456789",
-      "id": 13
+      "id": 25
     }
   ],
   "routes": {
     "12": {
-      "route_id": 2,
+      "route_id": 1,
       "route_number": "12",
       "name": "Megenagna - Mexico",
       "stops": [
         {
           "name": "Megenagna",
-          "id": 2,
+          "id": 116,
           "lat": 9.0267,
           "lon": 38.7613,
           "is_terminal": true
         },
         {
           "name": "Bole Michael",
-          "id": 3,
+          "id": 117,
           "lat": 9.0198,
           "lon": 38.7556,
           "is_terminal": false
         },
         {
           "name": "Bole Road",
-          "id": 4,
+          "id": 118,
           "lat": 9.0144,
           "lon": 38.7504,
           "is_terminal": false
         },
         {
           "name": "Awareness",
-          "id": 5,
+          "id": 119,
           "lat": 9.0065,
           "lon": 38.7461,
           "is_terminal": false
         },
         {
           "name": "CMC",
-          "id": 6,
+          "id": 120,
           "lat": 9.0011,
           "lon": 38.7423,
           "is_terminal": false
         },
         {
           "name": "Mexico",
-          "id": 7,
+          "id": 121,
           "lat": 8.9956,
           "lon": 38.7385,
           "is_terminal": true
         }
       ]
     },
-    "121": {
-      "route_id": 1,
-      "route_number": "121",
-      "name": "megenagna - mexico",
-      "stops": [
-        {
-          "name": "Kality Bus Station",
-          "id": 36,
-          "lat": 9.0167,
-          "lon": 38.7667,
-          "is_terminal": true
-        },
-        {
-          "name": "Bole Road (near Ghana St)",
-          "id": 37,
-          "lat": 9.02,
-          "lon": 38.77,
-          "is_terminal": false
-        },
-        {
-          "name": "Africa Avenue (near St. Joseph)",
-          "id": 38,
-          "lat": 9.025,
-          "lon": 38.775,
-          "is_terminal": false
-        },
-        {
-          "name": "Meskel Square",
-          "id": 39,
-          "lat": 9.03,
-          "lon": 38.78,
-          "is_terminal": true
-        }
-      ]
-    },
-    "122": {
-      "route_id": 8,
-      "route_number": "122",
-      "name": "Akaki \u2194 Entoto Hills",
-      "stops": [
-        {
-          "name": "Akaki Terminal",
-          "id": 29,
-          "lat": 9.0,
-          "lon": 38.75,
-          "is_terminal": true
-        },
-        {
-          "name": "Bole International Approach",
-          "id": 30,
-          "lat": 9.012,
-          "lon": 38.76,
-          "is_terminal": false
-        },
-        {
-          "name": "Entoto Hills Base",
-          "id": 31,
-          "lat": 9.045,
-          "lon": 38.78,
-          "is_terminal": false
-        },
-        {
-          "name": "Entoto Hills Summit",
-          "id": 32,
-          "lat": 9.05,
-          "lon": 38.785,
-          "is_terminal": true
-        }
-      ]
-    },
-    "150": {
-      "route_id": 9,
-      "route_number": "150",
-      "name": "Gulele \u2194 Saris",
-      "stops": [
-        {
-          "name": "Gulele Square",
-          "id": 33,
-          "lat": 9.038,
-          "lon": 38.745,
-          "is_terminal": true
-        },
-        {
-          "name": "Wollo Sefer",
-          "id": 34,
-          "lat": 9.04,
-          "lon": 38.755,
-          "is_terminal": false
-        },
-        {
-          "name": "Saris Market",
-          "id": 35,
-          "lat": 9.048,
-          "lon": 38.76,
-          "is_terminal": true
-        }
-      ]
-    },
-    "21": {
-      "route_id": 4,
-      "route_number": "21",
-      "name": "Merkato - Bole Airport",
-      "stops": [
-        {
-          "name": "Merkato",
-          "id": 13,
-          "lat": 9.0193,
-          "lon": 38.7356,
-          "is_terminal": true
-        },
-        {
-          "name": "Piassa",
-          "id": 14,
-          "lat": 9.0245,
-          "lon": 38.7408,
-          "is_terminal": false
-        },
-        {
-          "name": "Arada",
-          "id": 15,
-          "lat": 9.0297,
-          "lon": 38.7461,
-          "is_terminal": false
-        },
-        {
-          "name": "Wavel",
-          "id": 16,
-          "lat": 9.021,
-          "lon": 38.752,
-          "is_terminal": false
-        },
-        {
-          "name": "Bole Airport",
-          "id": 17,
-          "lat": 9.035,
-          "lon": 38.799,
-          "is_terminal": true
-        }
-      ]
-    },
-    "33": {
-      "route_id": 7,
-      "route_number": "33",
-      "name": "Megenagna - Saris",
-      "stops": [
-        {
-          "name": "Megenagna",
-          "id": 2,
-          "lat": 9.0267,
-          "lon": 38.7613,
-          "is_terminal": true
-        },
-        {
-          "name": "Urael",
-          "id": 26,
-          "lat": 9.019,
-          "lon": 38.7567,
-          "is_terminal": false
-        },
-        {
-          "name": "Kality",
-          "id": 27,
-          "lat": 9.0112,
-          "lon": 38.7523,
-          "is_terminal": false
-        },
-        {
-          "name": "Gofa",
-          "id": 28,
-          "lat": 9.0035,
-          "lon": 38.7345,
-          "is_terminal": false
-        },
-        {
-          "name": "Saris",
-          "id": 18,
-          "lat": 8.992,
-          "lon": 38.72,
-          "is_terminal": true
-        }
-      ]
-    },
     "45": {
-      "route_id": 3,
+      "route_id": 2,
       "route_number": "45",
       "name": "Stadium - Ayat",
       "stops": [
         {
           "name": "Stadium",
-          "id": 8,
+          "id": 122,
           "lat": 9.0086,
           "lon": 38.761,
           "is_terminal": true
         },
         {
           "name": "Gofa Mebrat",
-          "id": 9,
+          "id": 123,
           "lat": 9.0013,
           "lon": 38.7678,
           "is_terminal": false
         },
         {
           "name": "Kaliti",
-          "id": 10,
+          "id": 124,
           "lat": 8.9942,
           "lon": 38.7745,
           "is_terminal": false
         },
         {
           "name": "Akaki",
-          "id": 11,
+          "id": 125,
           "lat": 8.9875,
           "lon": 38.781,
           "is_terminal": false
         },
         {
           "name": "Ayat",
-          "id": 12,
+          "id": 126,
           "lat": 8.9803,
           "lon": 38.788,
           "is_terminal": true
         }
       ]
     },
+    "21": {
+      "route_id": 3,
+      "route_number": "21",
+      "name": "Merkato - Bole Airport",
+      "stops": [
+        {
+          "name": "Merkato",
+          "id": 127,
+          "lat": 9.0193,
+          "lon": 38.7356,
+          "is_terminal": true
+        },
+        {
+          "name": "Piassa",
+          "id": 128,
+          "lat": 9.0245,
+          "lon": 38.7408,
+          "is_terminal": false
+        },
+        {
+          "name": "Arada",
+          "id": 129,
+          "lat": 9.0297,
+          "lon": 38.7461,
+          "is_terminal": false
+        },
+        {
+          "name": "Wavel",
+          "id": 130,
+          "lat": 9.021,
+          "lon": 38.752,
+          "is_terminal": false
+        },
+        {
+          "name": "Bole Airport",
+          "id": 131,
+          "lat": 9.035,
+          "lon": 38.799,
+          "is_terminal": true
+        }
+      ]
+    },
     "67": {
-      "route_id": 5,
+      "route_id": 4,
       "route_number": "67",
       "name": "Saris - Piassa",
       "stops": [
         {
           "name": "Saris",
-          "id": 18,
+          "id": 132,
           "lat": 8.992,
           "lon": 38.72,
           "is_terminal": true
         },
         {
           "name": "Gotera",
-          "id": 19,
+          "id": 133,
           "lat": 9.0001,
           "lon": 38.7262,
           "is_terminal": false
         },
         {
           "name": "Tor Hailoch",
-          "id": 20,
+          "id": 134,
           "lat": 9.0078,
           "lon": 38.732,
           "is_terminal": false
         },
         {
           "name": "Arat Kilo",
-          "id": 21,
+          "id": 135,
           "lat": 9.0156,
           "lon": 38.738,
           "is_terminal": false
         },
         {
           "name": "Piassa",
-          "id": 14,
+          "id": 128,
           "lat": 9.0245,
           "lon": 38.7408,
-          "is_terminal": false
+          "is_terminal": true
         }
       ]
     },
     "89": {
-      "route_id": 6,
+      "route_id": 5,
       "route_number": "89",
       "name": "Kazanchis - Lideta",
       "stops": [
         {
           "name": "Kazanchis",
-          "id": 22,
+          "id": 136,
           "lat": 9.0167,
           "lon": 38.7631,
           "is_terminal": true
         },
         {
           "name": "Bole Bridge",
-          "id": 23,
+          "id": 137,
           "lat": 9.0133,
           "lon": 38.758,
           "is_terminal": false
         },
         {
           "name": "Bambis",
-          "id": 24,
+          "id": 138,
           "lat": 9.0101,
           "lon": 38.7529,
           "is_terminal": false
         },
         {
           "name": "Stadium",
-          "id": 8,
+          "id": 122,
           "lat": 9.0086,
           "lon": 38.761,
-          "is_terminal": true
+          "is_terminal": false
         },
         {
           "name": "Lideta",
-          "id": 25,
+          "id": 139,
           "lat": 9.0048,
           "lon": 38.749,
           "is_terminal": true
         }
       ]
     },
-    "R207c14ab": {
-      "route_id": 12,
-      "route_number": "R207c14ab",
-      "name": "Route 207c14ab",
-      "stops": []
-    },
-    "R6fac0a2a": {
-      "route_id": 11,
-      "route_number": "R6fac0a2a",
-      "name": "Route 6fac0a2a",
-      "stops": []
-    },
-    "R74723d3f": {
-      "route_id": 10,
-      "route_number": "R74723d3f",
-      "name": "Route 74723d3f",
-      "stops": []
-    },
-    "R7a14c352": {
-      "route_id": 13,
-      "route_number": "R7a14c352",
-      "name": "Route 7a14c352",
-      "stops": []
-    },
-    "Raff2507d": {
-      "route_id": 14,
-      "route_number": "Raff2507d",
-      "name": "Route aff2507d",
-      "stops": []
+    "33": {
+      "route_id": 6,
+      "route_number": "33",
+      "name": "Megenagna - Saris",
+      "stops": [
+        {
+          "name": "Megenagna",
+          "id": 116,
+          "lat": 9.0267,
+          "lon": 38.7613,
+          "is_terminal": true
+        },
+        {
+          "name": "Urael",
+          "id": 140,
+          "lat": 9.019,
+          "lon": 38.7567,
+          "is_terminal": false
+        },
+        {
+          "name": "Kality",
+          "id": 141,
+          "lat": 9.0112,
+          "lon": 38.7523,
+          "is_terminal": false
+        },
+        {
+          "name": "Gofa",
+          "id": 142,
+          "lat": 9.0035,
+          "lon": 38.7345,
+          "is_terminal": false
+        },
+        {
+          "name": "Saris",
+          "id": 132,
+          "lat": 8.992,
+          "lon": 38.72,
+          "is_terminal": true
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,156 @@
+erDiagram
+    USER {
+        int id PK
+        varchar username UK
+        varchar email UK
+        varchar password_hash
+        varchar role "driver|admin|passenger"
+        varchar google_id UK
+        boolean is_verified
+        int created_by_id FK
+        datetime created_at
+    }
+
+    VEHICLE {
+        int id PK
+        varchar plate_number UK
+        varchar device_id UK "SIM7600 IMEI"
+        varchar bus_type
+        int capacity
+        boolean is_active
+        int route_id FK
+        float last_lat
+        float last_lon
+        float speed
+        datetime position_updated_at
+    }
+
+    ROUTE {
+        int id PK
+        varchar route_number
+        varchar direction "forward|backward"
+        varchar name
+        varchar origin
+        varchar destination
+        boolean active
+    }
+
+    STOP {
+        int id PK
+        varchar name
+        float lat
+        float lon
+        int base_dwell_time
+        boolean is_terminal
+        float peak_multiplier
+    }
+
+    ROUTE_STOP {
+        int route_id PK,FK
+        int stop_id PK,FK
+        int sequence_order
+    }
+
+    ASSIGNMENT {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        int route_id FK
+        datetime start_time
+        datetime end_time
+        varchar status "active|completed|cancelled"
+    }
+
+    RAW_TELEMETRY {
+        int id PK
+        datetime timestamp
+        int vehicle_id FK
+        float raw_lat
+        float raw_lon
+        int pixel_count
+        jsonb raw_payload
+    }
+
+    TRIP_HISTORY {
+        int id PK
+        int assignment_id FK
+        int stop_id FK
+        datetime arrival_time
+        int dwell_time
+        int occupancy_level
+        int heuristic_eta
+        int ml_eta
+        int actual_travel_time
+    }
+
+    MODEL_PERFORMANCE {
+        int id PK
+        int trip_history_id FK
+        float heuristic_error
+        float ml_error
+        datetime timestamp
+    }
+
+    FAVORITE {
+        int id PK
+        int user_id FK
+        int route_id FK
+        varchar nickname
+    }
+
+    RATING {
+        int id PK
+        int user_id FK
+        int assignment_id FK
+        int score "1-5"
+        text comment
+        datetime timestamp
+    }
+
+    NOTIFICATION_SETTING {
+        int id PK
+        int user_id FK
+        int route_id FK
+        int lead_time_minutes
+    }
+
+    SYSTEM_SETTINGS {
+        int id PK
+        varchar key UK
+        varchar value
+    }
+
+    DRIVER_BUS_SESSION {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        datetime login_at
+        datetime logout_at
+        varchar status "active|ended"
+    }
+
+    USER ||--o{ ASSIGNMENT : "driver_id"
+    USER ||--o{ FAVORITE : "user_id"
+    USER ||--o{ RATING : "user_id"
+    USER ||--o{ NOTIFICATION_SETTING : "user_id"
+    USER ||--o{ DRIVER_BUS_SESSION : "driver_id"
+    USER ||--o| USER : "created_by_id (self-ref)"
+
+    VEHICLE }o--|| ROUTE : "route_id"
+    VEHICLE ||--o{ ASSIGNMENT : "vehicle_id"
+    VEHICLE ||--o{ RAW_TELEMETRY : "vehicle_id"
+    VEHICLE ||--o{ DRIVER_BUS_SESSION : "vehicle_id"
+
+    ROUTE ||--o{ ROUTE_STOP : "route_id"
+    ROUTE ||--o{ ASSIGNMENT : "route_id"
+    ROUTE ||--o{ FAVORITE : "route_id"
+    ROUTE ||--o{ NOTIFICATION_SETTING : "route_id"
+    ROUTE ||--o{ VEHICLE : "vehicles"
+
+    STOP ||--o{ ROUTE_STOP : "stop_id"
+    STOP ||--o{ TRIP_HISTORY : "stop_id"
+
+    ASSIGNMENT ||--o{ TRIP_HISTORY : "assignment_id"
+    ASSIGNMENT ||--o{ RATING : "assignment_id"
+
+    TRIP_HISTORY ||--o{ MODEL_PERFORMANCE : "trip_history_id"
