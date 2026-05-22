@@ -293,7 +293,11 @@ async def process_esp32_telemetry(
             assignment_id,
         )
     except Exception:
-        pass
+        import logging
+
+        logging.exception(
+            "set_bus_live_pipeline failed for %s (plate=%s)", vehicle.id, vehicle.plate_number
+        )
 
     # ── Step 6b: Store detailed CV result in Redis ──
     try:
@@ -308,7 +312,11 @@ async def process_esp32_telemetry(
             method=cv_result["method"],
         )
     except Exception:
-        pass
+        import logging
+
+        logging.exception(
+            "update_cv_result failed for %s (plate=%s)", vehicle.id, vehicle.plate_number
+        )
 
     # ── Step 7: Compute ETAs if on route ──
     eta_payloads = {}

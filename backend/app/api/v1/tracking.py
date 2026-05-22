@@ -97,7 +97,13 @@ async def receive_telemetry(
             assignment.id if assignment else 0,
         )
     except Exception:
-        pass
+        import logging
+
+        logging.exception(
+            "set_bus_live_pipeline failed in /telemetry for device %s plate %s",
+            data.device_id,
+            vehicle.plate_number,
+        )
 
     if vehicle.route and route_stops:
         stop_payloads = estimate_route_stop_eta_payloads(

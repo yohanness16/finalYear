@@ -1,6 +1,13 @@
-"""Redis connection and helper functions for live state."""
+"""Redis connection and helper functions for live state.
+
+Improvements:
+- Use proper TLS kwargs for `rediss://` URLs (avoid string literals).
+- Ping the server on first connect and log errors so writes don't fail silently.
+"""
 
 import json
+import logging
+import ssl
 from typing import Any
 
 import redis.asyncio as redis
@@ -15,17 +22,31 @@ _redis_client: redis.Redis | None = None
 def _build_redis_kwargs(url: str) -> dict:
     """Build kwargs for redis.from_url, handling Upstash TLS (rediss://)."""
     kwargs: dict = {"encoding": "utf-8", "decode_responses": True}
+    # If using TLS (rediss), allow insecure certs for Upstash (managed TLS),
+    # but pass the correct Python object instead of a string.
     if url.startswith("rediss://"):
-        kwargs["ssl_cert_reqs"] = "none"
+        # redis.from_url will set ssl=True for rediss://; set ssl_cert_reqs to
+        # None so certificate validation is disabled when necessary.
+        kwargs["ssl_cert_reqs"] = None
     return kwargs
 
 
 async def get_redis() -> redis.Redis:
-    """Get Redis client instance."""
+    """Get Redis client instance and verify connectivity with a ping.
+
+    Raises the underlying exception if connecting/pinging fails so callers
+    can observe errors (we also log for diagnostics).
+    """
     global _redis_client
     if _redis_client is None:
         kwargs = _build_redis_kwargs(settings.REDIS_URL)
         _redis_client = redis.from_url(settings.REDIS_URL, **kwargs)
+        try:
+            await _redis_client.ping()
+        except Exception as exc:  # pragma: no cover - runtime diagnostics
+            logging.exception("Failed to connect to Redis at %s", settings.REDIS_URL)
+            # Re-raise so the failure is visible to the caller and logged upstream
+            raise
     return _redis_client
 
 
