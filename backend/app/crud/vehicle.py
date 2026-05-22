@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.models.assignment import Assignment
 from app.models.vehicle import Vehicle
 from app.utils.redis_client import get_redis, bus_live_key
+from app.services.redis_cache import get_cv_result
 
 
 async def get_vehicle_by_id(db: AsyncSession, vehicle_id: int) -> Vehicle | None:
@@ -81,14 +82,25 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
         if lat is None or lon is None:
             continue
         ts = pos_at.timestamp() if pos_at else now_ts
-        # default occupancy
-        occupancy = 0
+        # try bus live hash first, then fallback to CV result hash
+        occupancy: int | None = None
         try:
             client = await get_redis()
             raw = await client.hget(bus_live_key(plate), "occupancy_level")
             if raw is not None:
                 occupancy = int(raw)
         except Exception:
+            occupancy = None
+
+        if occupancy is None:
+            try:
+                cv = await get_cv_result(plate)
+                if cv is not None and "occupancy_level" in cv:
+                    occupancy = int(cv.get("occupancy_level", 0))
+            except Exception:
+                occupancy = None
+
+        if occupancy is None:
             occupancy = 0
 
         out[str(vid)] = {
@@ -132,13 +144,24 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
     if lat is None or lon is None:
         return None
     ts = pos_at.timestamp() if pos_at else datetime.now(UTC).timestamp()
-    occupancy = 0
+    occupancy: int | None = None
     try:
         client = await get_redis()
         raw = await client.hget(bus_live_key(plate), "occupancy_level")
         if raw is not None:
             occupancy = int(raw)
     except Exception:
+        occupancy = None
+
+    if occupancy is None:
+        try:
+            cv = await get_cv_result(plate)
+            if cv is not None and "occupancy_level" in cv:
+                occupancy = int(cv.get("occupancy_level", 0))
+        except Exception:
+            occupancy = None
+
+    if occupancy is None:
         occupancy = 0
 
     return {
