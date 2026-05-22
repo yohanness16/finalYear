@@ -20,7 +20,7 @@ from app.schemas.vehicle import (
     VehiclePosition,
     VehicleResponse,
 )
-from app.services.cv_engine import estimate_density
+from app.utils.occupancy import resolve_occupancy_level
 
 router = APIRouter(tags=["vehicles"])
 
@@ -138,9 +138,7 @@ async def receive_telemetry(
             is_active=True,
         )
 
-    occupancy_level = 0
-    if data.pixel_count is not None:
-        occupancy_level = estimate_density(data.pixel_count)
+    occupancy_level = resolve_occupancy_level(data.pixel_count, data.raw_payload)
 
     await crud_vehicle.update_position(
         db, vehicle.id, data.lat, data.lon, data.speed or 0

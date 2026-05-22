@@ -11,7 +11,6 @@ from app.crud import tracking as crud_tracking
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
 from app.schemas.tracking import TelemetryInput
-from app.services.cv_engine import estimate_density
 from app.services.redis_cache import (
     get_last_coords,
     get_route_stops,
@@ -19,6 +18,7 @@ from app.services.redis_cache import (
 )
 from app.services.route_eta import estimate_route_stop_eta_payloads
 from app.services.route_validation import find_nearest_stop, is_on_route
+from app.utils.occupancy import resolve_occupancy_level
 from app.utils.gps_validation import get_average_coord, is_valid_coord
 from app.utils.redis_client import set_route_stop_etas
 
@@ -77,9 +77,7 @@ async def receive_telemetry(
             return {"status": "rejected", "reason": "gps_outlier"}
 
     assignment = await crud_assignment.get_active_assignment_by_vehicle(db, vehicle.id)
-    occupancy = 0
-    if data.pixel_count is not None:
-        occupancy = estimate_density(data.pixel_count)
+    occupancy = resolve_occupancy_level(data.pixel_count, data.raw_payload)
 
     background_tasks.add_task(
         _save_raw_telemetry,
