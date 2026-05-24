@@ -114,40 +114,70 @@ async def update_cv_result(
     crowd_density: int,
     confidence: float,
     method: str,
+    image_path: str | None = None,
     ttl: int = 300,
 ) -> None:
     """Update the CV result hash for a vehicle after image analysis."""
     key_cv = f"veh:cv:{plate}"
     client = await get_redis()
-    await client.hset(
-        key_cv,
-        mapping={
-            "occupancy_level": str(occupancy_level),
-            "people_count": str(people_count),
-            "crowd_density": str(crowd_density),
-            "confidence": str(confidence),
-            "method": method,
-            "updated_at": str(int(_time.time())),
-        },
-    )
+    mapping: dict[str, str] = {
+        "occupancy_level": str(occupancy_level),
+        "people_count": str(people_count),
+        "crowd_density": str(crowd_density),
+        "confidence": str(confidence),
+        "method": method,
+        "updated_at": str(int(_time.time())),
+    }
+    if image_path:
+        mapping["image_path"] = image_path
+    await client.hset(key_cv, mapping=mapping)
     await client.expire(key_cv, ttl)
 
 
-async def get_cv_result(plate: str) -> dict[str, Any] | None:
-    """Get the latest CV result for a vehicle. Returns None if not found."""
+async def get_cv_result(
+    plate: str,
+    keys: tuple[str, ...] | None = None,
+    defaults: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Get the latest CV result for a vehicle. Returns None if not found.
+
+    Args:
+        plate: Vehicle plate number.
+        keys: Optional tuple of Redis hash keys to retrieve. When None,
+              returns the standard 6-field dict for backward compatibility.
+        defaults: Optional default values for each key. When provided the
+                  return dict will contain every key in *keys*.
+    """
     key_cv = f"veh:cv:{plate}"
     client = await get_redis()
     data = await client.hgetall(key_cv)
     if not data:
         return None
-    return {
-        "occupancy_level": int(data.get("occupancy_level", 0)),
-        "people_count": int(data.get("people_count", 0)),
-        "crowd_density": int(data.get("crowd_density", 0)),
-        "confidence": float(data.get("confidence", 0.0)),
-        "method": data.get("method", "unknown"),
-        "updated_at": int(data.get("updated_at", 0)),
-    }
+
+    if keys is None:
+        return {
+            "occupancy_level": int(data.get("occupancy_level", 0)),
+            "people_count": int(data.get("people_count", 0)),
+            "crowd_density": int(data.get("crowd_density", 0)),
+            "confidence": float(data.get("confidence", 0.0)),
+            "method": data.get("method", "unknown"),
+            "updated_at": int(data.get("updated_at", 0)),
+        }
+
+    # Extended mode: return exactly the requested keys with type coercion.
+    result: dict[str, Any] = {}
+    for k in keys:
+        raw = data.get(k)
+        if raw is None:
+            result[k] = defaults.get(k, None) if defaults else None
+            continue
+        if k in ("occupancy_level", "people_count", "crowd_density", "updated_at"):
+            result[k] = int(raw)
+        elif k == "confidence":
+            result[k] = float(raw)
+        else:
+            result[k] = raw
+    return result
 
 
 def set_last_position(plate: str, lat: float, lon: float, ttl: int = 300) -> None:

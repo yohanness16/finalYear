@@ -310,6 +310,7 @@ async def process_esp32_telemetry(
             crowd_density=cv_result["crowd_density"],
             confidence=cv_result["confidence"],
             method=cv_result["method"],
+            image_path=image_path if result["image_saved"] else None,
         )
     except Exception:
         import logging
