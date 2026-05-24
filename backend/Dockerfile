@@ -35,14 +35,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Copy requirements first (better Docker caching)
 COPY requirements.txt .
-COPY requirements-ml.txt .
 
-# Install Python dependencies (base always, ML extras for production YOLO)
-ARG INSTALL_ML=false
-RUN pip install --no-cache-dir -r requirements.txt && \
-    if [ "$INSTALL_ML" = "true" ]; then \
-        pip install --no-cache-dir -r requirements-ml.txt; \
-    fi
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim-bookworm AS runtime

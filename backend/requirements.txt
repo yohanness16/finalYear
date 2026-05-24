@@ -1,16 +1,23 @@
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+torch==2.2.1
+torchvision==0.17.1
+numpy==1.26.4
 fastapi
-uvicorn[standard]
+uvicorn
+ultralytics
+supabase
+redis
 sqlalchemy
 asyncpg
 alembic
 psycopg2-binary
-redis
 pydantic-settings
 email-validator
 python-jose[cryptography]
 passlib[bcrypt]
 opencv-python-headless
-numpy
 scikit-learn
 joblib
 pandas
@@ -19,9 +26,6 @@ httpx
 geoalchemy2
 slowapi
 python-dotenv
-pytest
-pytest-asyncio
-httpx
 gunicorn
 python-multipart
 bcrypt==4.0.1
