@@ -237,15 +237,15 @@ def estimate_density_from_people_count(
 ) -> int:
     if bus_capacity and bus_capacity > 0:
         load_ratio = people_count / bus_capacity
-        if load_ratio < 0.3:
+        if load_ratio < 0.15:
             return 0
-        if load_ratio < 0.7:
+        if load_ratio < 0.55:
             return 1
         return 2
 
     if people_count <= 1:
         return 0
-    if people_count <= 6:
+    if people_count <= 5:
         return 1
     return 2
 
