@@ -1,0 +1,10 @@
+# ML/CV extras — install separately when YOLO inference is needed:
+#   pip install -r requirements-ml.txt
+#
+# These are kept separate because torch (~200MB CPU / ~2GB CUDA) and
+# ultralytics (~50MB) are heavy.  The application runs fine without them
+# — it falls back to the built-in OpenCV HOG detector.
+
+-r requirements.txt
+ultralytics>=8.2.0
+torch>=2.1.0

@@ -15,8 +15,6 @@ scikit-learn
 joblib
 pandas
 matplotlib
-ultralytics>=8.2.0
-torch>=2.1.0
 httpx
 geoalchemy2
 slowapi
