@@ -86,7 +86,8 @@ jobs:
             --ignore=tests/test_bus_gps_tracking.py \
             --ignore=tests/test_auth_case.py \
             --ignore=tests/test_image_pipeline.py \
-            --ignore=tests/test_esp32_gateway.py
+            --ignore=tests/test_esp32_gateway.py \
+            --ignore=tests/test_yolo_detector.py
 
       - name: Verify OpenAPI spec
         run: |
@@ -128,6 +129,8 @@ jobs:
         with:
           context: ./backend
           push: true
+          build-args: |
+            INSTALL_ML=true
           tags: |
             ${{ env.DOCKER_IMAGE }}:latest
             ${{ steps.tag.outputs.image_tag }}

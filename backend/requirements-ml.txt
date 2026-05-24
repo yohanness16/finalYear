@@ -1,0 +1,9 @@
+# ML/CV extras — installed in Docker build only, not in CI test jobs
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+torch==2.2.1
+torchvision==0.17.1
+numpy==1.26.4
+ultralytics
+supabase
