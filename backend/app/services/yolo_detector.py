@@ -28,7 +28,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +191,7 @@ def _get_device() -> str:
 
 # ── Detection functions ───────────────────────────────────────────────────────
 
-def _detect_full_body(frame: Any, confidence: float) -> tuple[list, list]]:
+def _detect_full_body(frame: Any, confidence: float) -> Tuple[list, list]:
     """Run YOLOv8 person detection. Returns (boxes, scores)."""
     model = _load_person_model()
     if model is None:
@@ -220,7 +220,7 @@ def _detect_full_body(frame: Any, confidence: float) -> tuple[list, list]]:
     return boxes, scores
 
 
-def _detect_faces(frame: Any, confidence: float) -> tuple[list, list]]:
+def _detect_faces(frame: Any, confidence: float) -> Tuple[list, list]:
     """Run YOLOv8 face detection. Returns (boxes, scores).
 
     Face detection catches people whose bodies are occluded or out of frame
@@ -272,7 +272,6 @@ def _detect_head_blobs(frame: Any) -> list:
     Returns list of [x1, y1, x2, y2] bounding boxes for detected heads.
     """
     import cv2
-    import numpy as np
 
     # Enhance contrast for better head/background separation
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

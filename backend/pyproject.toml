@@ -1,4 +1,5 @@
 [tool.ruff]
+target-version = "py312"
 exclude = ["migrations", "scripts"]
 
 [tool.ruff.lint]
