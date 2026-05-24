@@ -113,6 +113,7 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
             "route_id": route_id,
             "assignment_id": assignment_id,
             "occupancy_level": occupancy,
+            "density_level": occupancy,
         }
     return out
 
