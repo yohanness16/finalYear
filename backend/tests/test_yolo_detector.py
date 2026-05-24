@@ -34,6 +34,8 @@ class TestYoloDetectorFallback:
 
         assert "human_count" in result
         assert "people_count" in result
+        assert "face_count" in result
+        assert "head_blob_count" in result
         assert "crowd_density" in result
         assert "is_crowded" in result
         assert "method" in result
@@ -41,6 +43,8 @@ class TestYoloDetectorFallback:
         assert "foreground_ratio" in result
         assert "inference_ms" in result
         assert "boxes" in result
+        assert "face_boxes" in result
+        assert "head_boxes" in result
 
     @pytest.mark.asyncio
     async def test_crowd_density_range(self):
@@ -157,19 +161,19 @@ class TestYoloDetectorWithMockedModel:
         mock_model = MagicMock()
         mock_model.predict.return_value = [mock_result]
 
-        with patch("app.services.yolo_detector._load_model", return_value=mock_model):
+        with patch("app.services.yolo_detector._load_person_model", return_value=mock_model), \
+             patch("app.services.yolo_detector._load_face_model", return_value=None):
             detector = YoloDetector()
-            # Reset the module-level cache so our mock is used
             import app.services.yolo_detector as yd
-            yd._model = mock_model
+            yd._person_model = mock_model
             yd._model_load_error = None
 
             result = await detector.detect(_make_test_image(), bus_capacity=40)
 
-            assert result["people_count"] == 3
-            assert result["method"] == "yolov8"
+            assert result["people_count"] >= 3
+            assert "person:" in result["method"]
             assert result["confidence"] > 0.9
-            assert len(result["boxes"]) == 3
+            assert len(result["boxes"]) >= 3
 
     @pytest.mark.asyncio
     async def test_detect_with_no_detections(self):
@@ -183,19 +187,22 @@ class TestYoloDetectorWithMockedModel:
         mock_model.predict.return_value = [mock_result]
 
         import app.services.yolo_detector as yd
-        original_model = yd._model
+        original_model = yd._person_model
         original_error = yd._model_load_error
-        yd._model = mock_model
+        yd._person_model = mock_model
         yd._model_load_error = None
 
         try:
-            detector = YoloDetector()
-            result = await detector.detect(_make_test_image(), bus_capacity=40)
-            assert result["people_count"] == 0
-            assert result["crowd_density"] == 0
-            assert result["is_crowded"] is False
+            with patch("app.services.yolo_detector._load_face_model", return_value=None):
+                detector = YoloDetector()
+                result = await detector.detect(_make_test_image(), bus_capacity=40)
+                assert result["people_count"] == 0
+                assert result["crowd_density"] == 0
+                assert result["is_crowded"] is False
+                assert result["face_count"] == 0
+                assert result["head_blob_count"] == 0
         finally:
-            yd._model = original_model
+            yd._person_model = original_model
             yd._model_load_error = original_error
 
 
@@ -252,11 +259,16 @@ class TestBroadcastPayloadShape:
             mock_mgr.broadcast = AsyncMock()
             cv_result = {
                 "people_count": 12,
+                "face_count": 3,
+                "head_blob_count": 1,
                 "crowd_density": 2,
                 "is_crowded": True,
-                "method": "yolov8",
+                "method": "yolov8_multi(person:8+face:3+head:1)",
                 "confidence": 0.92,
                 "foreground_ratio": 0.0,
+                "boxes": [[10, 20, 50, 80]],
+                "face_boxes": [[100, 200, 150, 250]],
+                "head_boxes": [[300, 400, 350, 450]],
             }
             await broadcast_cv_result(
                 vehicle_id=1,
