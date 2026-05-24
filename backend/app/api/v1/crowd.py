@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 _CV_HASH_KEYS = (
     "occupancy_level",
     "people_count",
+    "face_count",
+    "head_blob_count",
     "crowd_density",
     "confidence",
     "method",
@@ -23,6 +25,8 @@ _CV_HASH_KEYS = (
 _DEFAULTS = {
     "occupancy_level": 0,
     "people_count": 0,
+    "face_count": 0,
+    "head_blob_count": 0,
     "crowd_density": 0,
     "confidence": 0.0,
     "method": "unknown",
