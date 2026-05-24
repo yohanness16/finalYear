@@ -26,6 +26,10 @@ from app.crud import tracking as crud_tracking
 from app.crud import vehicle as crud_vehicle
 from app.services.cv_engine import analyze_bus_density_from_image
 from app.services.live_broadcast import broadcast_cv_result, broadcast_vehicle_position
+from app.services.yolo_detector import YoloDetector
+
+# Shared detector instance (lazy-loads model on first use)
+_yolo_detector = YoloDetector()
 from app.services.redis_cache import get_last_coords, set_bus_live_pipeline
 from app.services.route_eta import estimate_route_stop_eta_payloads
 from app.services.route_validation import find_nearest_stop, is_on_route
@@ -226,9 +230,9 @@ async def process_esp32_telemetry(
     except Exception:
         result["image_saved"] = False
 
-    # ── Step 4: CV analysis ──
+    # ── Step 4: CV analysis (YOLOv8 primary, HOG fallback) ──
     capacity_for_cv = bus_capacity or vehicle.capacity
-    cv_result = analyze_bus_density_from_image(image_bytes, capacity_for_cv)
+    cv_result = await _yolo_detector.detect(image_bytes, capacity_for_cv)
     cv_occupancy_level = int(cv_result["crowd_density"])
 
     if occupancy_level is None:
