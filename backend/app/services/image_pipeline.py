@@ -24,7 +24,6 @@ from app.crud import assignment as crud_assignment
 from app.crud import route as crud_route
 from app.crud import tracking as crud_tracking
 from app.crud import vehicle as crud_vehicle
-from app.services.cv_engine import analyze_bus_density_from_image
 from app.services.live_broadcast import broadcast_cv_result, broadcast_vehicle_position
 from app.services.yolo_detector import YoloDetector
 

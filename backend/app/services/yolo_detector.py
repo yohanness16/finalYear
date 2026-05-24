@@ -15,7 +15,6 @@ so re-deployments without internet fall back to the cached copy.
 from __future__ import annotations
 
 import logging
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path

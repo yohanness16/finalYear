@@ -142,8 +142,6 @@ class TestYoloDetectorWithMockedModel:
     @pytest.mark.asyncio
     async def test_detect_with_mocked_yolo_detections(self):
         """When YOLO detects people, result should reflect the count."""
-        import numpy as np
-
         from app.services.yolo_detector import YoloDetector
 
         # Build a mock result that simulates 3 person detections
