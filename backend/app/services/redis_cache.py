@@ -115,6 +115,8 @@ async def update_cv_result(
     confidence: float,
     method: str,
     image_path: str | None = None,
+    face_count: int = 0,
+    head_blob_count: int = 0,
     ttl: int = 300,
 ) -> None:
     """Update the CV result hash for a vehicle after image analysis."""
@@ -123,6 +125,8 @@ async def update_cv_result(
     mapping: dict[str, str] = {
         "occupancy_level": str(occupancy_level),
         "people_count": str(people_count),
+        "face_count": str(face_count),
+        "head_blob_count": str(head_blob_count),
         "crowd_density": str(crowd_density),
         "confidence": str(confidence),
         "method": method,
@@ -171,7 +175,8 @@ async def get_cv_result(
         if raw is None:
             result[k] = defaults.get(k, None) if defaults else None
             continue
-        if k in ("occupancy_level", "people_count", "crowd_density", "updated_at"):
+        if k in ("occupancy_level", "people_count", "crowd_density", "updated_at",
+                 "face_count", "head_blob_count"):
             result[k] = int(raw)
         elif k == "confidence":
             result[k] = float(raw)
