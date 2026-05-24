@@ -91,11 +91,16 @@ async def broadcast_cv_result(
             "timestamp": ts,
             "cv": {
                 "people_count": cv_result.get("people_count", 0),
+                "face_count": cv_result.get("face_count", 0),
+                "head_blob_count": cv_result.get("head_blob_count", 0),
                 "crowd_density": cv_result.get("crowd_density", 0),
                 "is_crowded": cv_result.get("is_crowded", False),
                 "method": cv_result.get("method", "unknown"),
                 "confidence": cv_result.get("confidence", 0.0),
                 "foreground_ratio": cv_result.get("foreground_ratio", 0.0),
+                "boxes": cv_result.get("boxes", []),
+                "face_boxes": cv_result.get("face_boxes", []),
+                "head_boxes": cv_result.get("head_boxes", []),
             },
         }
         if image_path is not None:
