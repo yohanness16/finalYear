@@ -298,15 +298,16 @@ class TestLiveBroadcast:
 
     @pytest.mark.asyncio
     async def test_broadcast_error_handling(self):
-        """Broadcast functions should never raise."""
+        """Broadcast functions should never raise, even when WS is down."""
         from app.services.live_broadcast import (
             broadcast_cv_result,
             broadcast_vehicle_position,
         )
 
-        with patch("app.services.live_broadcast.manager") as mock_mgr:
+        with patch("app.services.live_broadcast.manager") as mock_mgr, \
+             patch("app.services.live_broadcast.logger"):
             mock_mgr.broadcast = AsyncMock(side_effect=Exception("WS down"))
-            # Should not raise
+            # Should not raise — exceptions are caught and logged
             await broadcast_vehicle_position(
                 vehicle_id=1,
                 plate_number="TEST",

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 from app.services.websocket import manager
+
+logger = logging.getLogger(__name__)
 
 
 async def broadcast_vehicle_position(
@@ -58,7 +61,10 @@ async def broadcast_vehicle_position(
             }
         await manager.broadcast(payload)
     except Exception:
-        pass
+        logger.warning(
+            "broadcast_vehicle_position failed for %s", plate_number,
+            exc_info=True,
+        )
 
 
 async def broadcast_cv_result(
@@ -95,4 +101,7 @@ async def broadcast_cv_result(
             payload["image_path"] = image_path
         await manager.broadcast(payload)
     except Exception:
-        pass
+        logger.warning(
+            "broadcast_cv_result failed for %s", plate_number,
+            exc_info=True,
+        )
