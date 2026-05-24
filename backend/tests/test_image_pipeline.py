@@ -336,20 +336,21 @@ class TestRedisCVStorage:
     async def test_update_and_get_cv_result(self):
         from app.services.redis_cache import get_cv_result, update_cv_result
 
-        with patch("app.services.redis_cache.redis_cache") as mock_redis:
-            mock_redis.hset = AsyncMock()
-            mock_redis.expire = AsyncMock()
-            mock_redis.hgetall = AsyncMock(
-                return_value={
-                    "occupancy_level": "2",
-                    "people_count": "8",
-                    "crowd_density": "2",
-                    "confidence": "0.85",
-                    "method": "hog+foreground",
-                    "updated_at": "1700000000",
-                }
-            )
+        mock_client = AsyncMock()
+        mock_client.hset = AsyncMock()
+        mock_client.expire = AsyncMock()
+        mock_client.hgetall = AsyncMock(
+            return_value={
+                "occupancy_level": "2",
+                "people_count": "8",
+                "crowd_density": "2",
+                "confidence": "0.85",
+                "method": "hog+foreground",
+                "updated_at": "1700000000",
+            }
+        )
 
+        with patch("app.services.redis_cache.get_redis", return_value=mock_client):
             await update_cv_result(
                 plate="TEST-001",
                 occupancy_level=2,
@@ -371,7 +372,9 @@ class TestRedisCVStorage:
     async def test_get_cv_result_not_found(self):
         from app.services.redis_cache import get_cv_result
 
-        with patch("app.services.redis_cache.redis_cache") as mock_redis:
-            mock_redis.hgetall = AsyncMock(return_value={})
+        mock_client = AsyncMock()
+        mock_client.hgetall = AsyncMock(return_value={})
+
+        with patch("app.services.redis_cache.get_redis", return_value=mock_client):
             result = await get_cv_result("NONEXISTENT")
             assert result is None
