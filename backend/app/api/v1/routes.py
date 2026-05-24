@@ -1,5 +1,7 @@
 """Route and stop endpoints."""
 
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,7 @@ from app.schemas.route import (
     StopCreate,
     StopResponse,
 )
+from app.utils.redis_client import get_redis
 
 router = APIRouter()
 
@@ -96,3 +99,35 @@ async def get_route(route_id: int, db: AsyncSession = Depends(get_db)):
         destination=r.destination,
         stops=stops,
     )
+
+
+@router.get("/routes/{route_number}/etas")
+async def get_route_etas(route_number: str):
+    """Get all pre-computed ETAs for a route's stops (Redis-cached).
+
+    Returns live-adjusted ETA seconds for each stop that has an active
+    ETA entry. Used by frontends for ETA countdown displays.
+    """
+    redis = await get_redis()
+    keys = await redis.keys(f"route:{route_number}:stop:*")
+    result: dict[str, dict[str, object]] = {}
+    now = time.time()
+    for key in keys:
+        data = await redis.hgetall(key)
+        if not data:
+            continue
+        stop_id = key.split(":")[-1]
+        try:
+            eta_seconds = float(data.get("eta_seconds", 0))
+            computed_at = float(data.get("computed_at", 0))
+            elapsed = max(0.0, now - computed_at)
+            live_eta = max(0, int(round(eta_seconds - elapsed)))
+        except (TypeError, ValueError):
+            live_eta = 0
+        result[stop_id] = {
+            "stop_name": data.get("stop_name", ""),
+            "eta_seconds": live_eta,
+            "distance_m": int(data.get("distance_m", 0)),
+            "occupancy_level": int(data.get("occupancy_level", 0)),
+        }
+    return {"route_number": route_number, "etas": result}

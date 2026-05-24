@@ -18,12 +18,17 @@ async def broadcast_vehicle_position(
     timestamp: float | None = None,
     bus_type: str | None = None,
     occupancy_level: int | None = None,
+    eta_payloads: dict[int, dict[str, Any]] | None = None,
 ) -> None:
     """
     Broadcast vehicle position update to all admin WebSocket clients.
 
     Includes occupancy_level from CV analysis so the admin dashboard
     can show crowd density alongside position on the live map.
+
+    When eta_payloads is provided (computed from route_eta.py), each
+    entry keyed by stop_id carries stop_name, eta_seconds, distance_m,
+    and computed_at so frontends can render live ETA countdowns.
     """
     try:
         ts = timestamp if timestamp is not None else time.time()
@@ -41,6 +46,16 @@ async def broadcast_vehicle_position(
             payload["bus_type"] = bus_type
         if occupancy_level is not None:
             payload["occupancy_level"] = occupancy_level
+        if eta_payloads is not None:
+            payload["eta_payloads"] = {
+                str(stop_id): {
+                    "stop_name": data.get("stop_name", ""),
+                    "eta_seconds": data.get("eta_seconds", 0),
+                    "distance_m": data.get("distance_m", 0),
+                    "computed_at": data.get("computed_at", 0),
+                }
+                for stop_id, data in eta_payloads.items()
+            }
         await manager.broadcast(payload)
     except Exception:
         pass

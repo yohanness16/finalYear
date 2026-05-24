@@ -1,6 +1,7 @@
 """Telemetry ingestion and live tracking endpoints."""
 
 from datetime import UTC
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,6 +106,7 @@ async def receive_telemetry(
             vehicle.plate_number,
         )
 
+    stop_payloads: dict[int, dict[str, Any]] = {}
     if vehicle.route and route_stops:
         stop_payloads = estimate_route_stop_eta_payloads(
             data.lat,
@@ -153,6 +155,7 @@ async def receive_telemetry(
         route_id=vehicle.route_id,
         timestamp=ts,
         occupancy_level=occupancy,
+        eta_payloads=stop_payloads or None,
     )
 
     return {

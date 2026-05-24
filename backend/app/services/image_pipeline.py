@@ -362,7 +362,7 @@ async def process_esp32_telemetry(
     # ── Step 10: Broadcast to WebSocket admins ──
     ts = datetime.now(UTC).timestamp()
 
-    # Broadcast position update with occupancy
+    # Broadcast position update with occupancy and ETA
     await broadcast_vehicle_position(
         vehicle_id=vehicle.id,
         plate_number=vehicle.plate_number,
@@ -373,6 +373,7 @@ async def process_esp32_telemetry(
         timestamp=ts,
         bus_type=vehicle.bus_type,
         occupancy_level=occupancy_level,
+        eta_payloads=eta_payloads or None,
     )
 
     # Broadcast detailed CV result as a separate message
