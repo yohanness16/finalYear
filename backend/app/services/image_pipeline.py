@@ -310,6 +310,8 @@ async def process_esp32_telemetry(
             plate=vehicle.plate_number,
             occupancy_level=occupancy_level,
             people_count=cv_result["people_count"],
+            face_count=cv_result.get("face_count", 0),
+            head_blob_count=cv_result.get("head_blob_count", 0),
             crowd_density=cv_result["crowd_density"],
             confidence=cv_result["confidence"],
             method=cv_result["method"],
