@@ -52,6 +52,7 @@ class VehiclePosition(BaseModel):
     route_id: int | None = None
     assignment_id: int | None = None
     occupancy_level: int = 0
+    density_level: int = 0
     last_updated: datetime | None = None
 
 
