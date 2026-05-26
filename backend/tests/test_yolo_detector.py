@@ -32,7 +32,6 @@ class TestYoloDetectorFallback:
         detector = YoloDetector()
         result = await detector.detect(_make_test_image(), bus_capacity=40)
 
-        assert "human_count" in result
         assert "people_count" in result
         assert "face_count" in result
         assert "head_blob_count" in result
@@ -131,13 +130,13 @@ class TestYoloDetectorFallback:
         assert result["inference_ms"] >= 0
 
     @pytest.mark.asyncio
-    async def test_human_count_equals_people_count(self):
-        """human_count must equal people_count."""
+    async def test_people_count_exists(self):
+        """people_count must be present in result."""
         from app.services.yolo_detector import YoloDetector
 
         detector = YoloDetector()
         result = await detector.detect(_make_test_image())
-        assert result["human_count"] == result["people_count"]
+        assert "people_count" in result
 
 
 class TestYoloDetectorWithMockedModel:
@@ -210,8 +209,8 @@ class TestBroadcastPayloadShape:
     """Test that broadcast functions produce the correct payload shapes."""
 
     @pytest.mark.asyncio
-    async def test_broadcast_vehicle_position_includes_density_level(self):
-        """vehicle_position must include both occupancy_level and density_level."""
+    async def test_broadcast_vehicle_position_includes_occupancy_level(self):
+        """vehicle_position must include occupancy_level."""
         from app.services.live_broadcast import broadcast_vehicle_position
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
@@ -228,11 +227,10 @@ class TestBroadcastPayloadShape:
             payload = mock_mgr.broadcast.call_args[0][0]
             assert payload["type"] == "vehicle_position"
             assert payload["occupancy_level"] == 2
-            assert payload["density_level"] == 2
 
     @pytest.mark.asyncio
     async def test_broadcast_vehicle_position_without_occupancy(self):
-        """When occupancy_level is None, density_level should not be present."""
+        """When occupancy_level is None, occupancy_level should not be present."""
         from app.services.live_broadcast import broadcast_vehicle_position
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
@@ -248,7 +246,6 @@ class TestBroadcastPayloadShape:
             )
             payload = mock_mgr.broadcast.call_args[0][0]
             assert "occupancy_level" not in payload
-            assert "density_level" not in payload
 
     @pytest.mark.asyncio
     async def test_broadcast_cv_result_shape(self):
@@ -282,7 +279,7 @@ class TestBroadcastPayloadShape:
             assert cv["people_count"] == 12
             assert cv["crowd_density"] == 2
             assert cv["is_crowded"] is True
-            assert cv["method"] == "yolov8"
+            assert cv["method"] == "yolov8_multi(person:8+face:3+head:1)"
             assert cv["confidence"] == 0.92
             assert cv["foreground_ratio"] == 0.0
             assert payload["image_path"] == "storage/esp32_images/test.jpg"

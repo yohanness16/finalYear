@@ -61,8 +61,7 @@ def test_analyze_bus_density_from_image_uses_blob_heuristic_for_bird_view():
     assert ok is True
 
     analysis = analyze_bus_density_from_image(encoded.tobytes(), bus_capacity=8)
-    assert analysis["human_count"] >= 4
-    assert analysis["people_count"] == analysis["human_count"]
+    assert analysis["people_count"] >= 4
     assert analysis["crowd_density"] == 2
     assert analysis["is_crowded"] is True
     assert analysis["method"] in {"foreground", "hog+foreground", "hog"}

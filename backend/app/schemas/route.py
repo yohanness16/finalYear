@@ -1,6 +1,6 @@
 """Route and stop schemas."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class StopBase(BaseModel):
@@ -19,8 +19,7 @@ class StopCreate(StopBase):
 class StopResponse(StopBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RouteStopSchema(BaseModel):
@@ -50,8 +49,7 @@ class RouteUpdate(BaseModel):
 class RouteResponse(RouteBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RouteWithStops(RouteResponse):

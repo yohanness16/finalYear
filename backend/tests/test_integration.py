@@ -8,10 +8,11 @@ They require:
 """
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def auth_headers(client: AsyncClient) -> dict:
     """Get JWT auth headers for a test user."""
     await client.post(
