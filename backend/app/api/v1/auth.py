@@ -280,13 +280,12 @@ async def bus_dashboard_login(
     if not vehicle or vehicle.device_id != body.device_id:
         raise HTTPException(status_code=401, detail="Invalid bus dashboard credentials")
 
-    password_hash = getattr(vehicle, "dashboard_password_hash", None)
-    if not password_hash:
+    if not vehicle.dashboard_password_hash:
         raise HTTPException(
             status_code=400, detail="Bus dashboard password is not configured"
         )
 
-    if not pwd_context.verify(body.password, password_hash):
+    if not pwd_context.verify(body.password, vehicle.dashboard_password_hash):
         raise HTTPException(status_code=401, detail="Invalid bus dashboard credentials")
 
     token_payload = {"sub": str(vehicle.id), "type": "bus_dashboard"}
