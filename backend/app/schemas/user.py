@@ -23,6 +23,8 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    is_verified: bool = False
+    google_id: str | None = None
     created_at: datetime
 
     class Config:
