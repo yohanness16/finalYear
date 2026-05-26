@@ -36,6 +36,7 @@ async def auth_headers(client: AsyncClient) -> dict:
     return {}
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_profile_update_flow(client: AsyncClient, auth_headers: dict):
     """GET /auth/me → PATCH /auth/me → GET /auth/me to verify update."""
@@ -58,6 +59,7 @@ async def test_profile_update_flow(client: AsyncClient, auth_headers: dict):
     assert me_resp2.json()["username"] == "newtestname123"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_change_password_flow(client: AsyncClient, auth_headers: dict):
     """POST /auth/change-password with correct current password."""
@@ -76,6 +78,7 @@ async def test_change_password_flow(client: AsyncClient, auth_headers: dict):
     assert resp.json()["status"] == "password_changed"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_favorite_crud_flow(client: AsyncClient, auth_headers: dict):
     """Create favorite → list → delete → verify deletion."""
@@ -97,6 +100,7 @@ async def test_favorite_crud_flow(client: AsyncClient, auth_headers: dict):
     assert fav_id not in remaining_ids
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_fcm_token_registration(client: AsyncClient):
     """POST /notifications/register-token should succeed."""
