@@ -113,3 +113,17 @@ class ResetPasswordRequest(BaseModel):
 
     token: str
     new_password: str = Field(..., min_length=8, max_length=100)
+
+
+class UserUpdateRequest(BaseModel):
+    """Update own profile (PATCH /auth/me)."""
+
+    username: str | None = Field(default=None, min_length=3, max_length=100)
+    email: EmailStr | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change own password (POST /auth/change-password)."""
+
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=100)

@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.schemas.auth import (
     BusDashboardLoginRequest,
     BusDashboardLoginResponse,
+    ChangePasswordRequest,
     DriverLoginRequest,
     DriverLoginResponse,
     DriverLogoutRequest,
@@ -25,6 +26,7 @@ from app.schemas.auth import (
     ResendVerificationRequest,
     ResetPasswordRequest,
     TokenResponse,
+    UserUpdateRequest,
     VerifyEmailRequest,
 )
 from app.schemas.user import UserResponse
