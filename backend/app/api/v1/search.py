@@ -187,6 +187,8 @@ async def journey_search(
                 route.route_number,
                 route.id,
                 eta_stops,
+                plate_number=plate_number,
+                vehicle_id=bus.get("vehicle_id"),
             )
             eta_data = eta_payloads.get(end_stop.id)
             if not eta_data:
