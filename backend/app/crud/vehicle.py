@@ -113,7 +113,7 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
             "route_id": route_id,
             "assignment_id": assignment_id,
             "occupancy_level": occupancy,
-            "density_level": occupancy,
+            "last_updated": pos_at,
         }
     return out
 
@@ -175,6 +175,7 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
         "route_id": route_id,
         "assignment_id": assignment_id,
         "occupancy_level": occupancy,
+        "last_updated": pos_at,
     }
 
 
