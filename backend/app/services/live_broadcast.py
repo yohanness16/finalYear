@@ -49,7 +49,6 @@ async def broadcast_vehicle_position(
             payload["bus_type"] = bus_type
         if occupancy_level is not None:
             payload["occupancy_level"] = occupancy_level
-            payload["density_level"] = occupancy_level
         if eta_payloads is not None:
             payload["eta_payloads"] = {
                 str(stop_id): {
