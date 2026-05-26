@@ -48,7 +48,7 @@ async def point_to_point_search(
 ):
     """
     Find routes passing through start and end stops.
-    Returns routes with pre-calculated bus ETAs from Redis.
+    Returns routes with pre-calculated bus ETAs and matching live buses.
     """
     start = await crud_route.get_stop_by_id(db, body.start_stop_id)
     end = await crud_route.get_stop_by_id(db, body.end_stop_id)
@@ -62,6 +62,13 @@ async def point_to_point_search(
         redis = await get_redis()
     except Exception:
         redis = None
+
+    live_positions: dict[str, dict] = {}
+    try:
+        live_positions = await crud_vehicle.get_live_positions(db)
+    except Exception:
+        live_positions = {}
+
     results = []
     for route in routes:
         key = f"route:{route.route_number}:stop:{body.start_stop_id}"
@@ -77,10 +84,17 @@ async def point_to_point_search(
             )
             if live_eta is not None:
                 data["eta_live_seconds"] = live_eta
-        if data:
-            results.append({"route_number": route.route_number, "etas": data})
-        else:
-            results.append({"route_number": route.route_number, "etas": {}})
+
+        route_buses = [
+            bus for bus in live_positions.values() if bus.get("route_id") == route.id
+        ]
+
+        entry: dict = {
+            "route_number": route.route_number,
+            "etas": data if data else {},
+            "buses": route_buses,
+        }
+        results.append(entry)
     return {"routes": results, "start_stop": start.name, "end_stop": end.name}
 
 
