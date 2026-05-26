@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.favorite import Favorite
 from app.models.rating import Rating
+from app.models.user import User
 from app.schemas.tracking import FavoriteCreate, RatingCreate
 
 router = APIRouter()
@@ -30,6 +32,23 @@ async def add_favorite(body: FavoriteCreate, db: AsyncSession = Depends(get_db))
 async def list_favorites(user_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Favorite).where(Favorite.user_id == user_id))
     return list(result.scalars().all())
+
+
+@router.delete("/favorites/{favorite_id}")
+async def delete_favorite(
+    favorite_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a favorite route (must own it or be admin)."""
+    fav = await db.get(Favorite, favorite_id)
+    if not fav:
+        raise HTTPException(404, "Favorite not found")
+    if fav.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Not your favorite")
+    await db.delete(fav)
+    await db.flush()
+    return {"status": "deleted", "id": favorite_id}
 
 
 @router.post("/ratings")
