@@ -35,6 +35,8 @@ def estimate_route_stop_eta_payloads(
     route_number: str,
     route_id: int | None,
     route_stops: list[Stop],
+    plate_number: str = "",
+    vehicle_id: int | None = None,
 ) -> dict[int, dict[str, Any]]:
     """Build Redis-ready ETA payloads keyed by stop_id."""
     if not route_stops:
@@ -123,6 +125,8 @@ def estimate_route_stop_eta_payloads(
             "distance_m": int(distance_m + 0.5),
             "speed_kmh": round(speed_kmh, 2),
             "occupancy_level": occupancy_level,
+            "bus_plate": plate_number,
+            "vehicle_id": str(vehicle_id or ""),
             "computed_at": computed_at,
         }
 
