@@ -123,6 +123,8 @@ jobs:
 
       - name: Run integration tests
         run: pytest -m integration -v --tb=short
+        env:
+          RUNNING_INTEGRATION: "1"
         continue-on-error: true
 
       - name: Upload test results

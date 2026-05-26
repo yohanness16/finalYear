@@ -7,9 +7,17 @@ They require:
   - The FastAPI app in test mode
 """
 
+import os
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+
+# Skip entire module when running as unit tests (not integration marker)
+# The CI unit test step uses: pytest -m "not integration" --ignore=tests/test_integration.py
+# This guard ensures the file is also skipped if collected without the integration marker.
+if not os.environ.get("RUNNING_INTEGRATION"):
+    pytest.skip("integration tests require RUNNING_INTEGRATION env var", allow_module_level=True)
 
 
 @pytest_asyncio.fixture
