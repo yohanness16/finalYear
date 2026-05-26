@@ -263,7 +263,6 @@ async def process_esp32_telemetry(
         "image_path": image_path,
         "bus_capacity": bus_capacity or vehicle.capacity,
         "cv": {
-            "human_count": cv_result["human_count"],
             "people_count": cv_result["people_count"],
             "crowd_density": cv_result["crowd_density"],
             "is_crowded": cv_result["is_crowded"],

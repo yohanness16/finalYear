@@ -63,7 +63,8 @@ async def broadcast_vehicle_position(
         await manager.broadcast(payload)
     except Exception:
         logger.warning(
-            "broadcast_vehicle_position failed for %s", plate_number,
+            "broadcast_vehicle_position failed for %s",
+            plate_number,
             exc_info=True,
         )
 
@@ -98,6 +99,7 @@ async def broadcast_cv_result(
                 "method": cv_result.get("method", "unknown"),
                 "confidence": cv_result.get("confidence", 0.0),
                 "foreground_ratio": cv_result.get("foreground_ratio", 0.0),
+                "inference_ms": cv_result.get("inference_ms", 0.0),
                 "boxes": cv_result.get("boxes", []),
                 "face_boxes": cv_result.get("face_boxes", []),
                 "head_boxes": cv_result.get("head_boxes", []),
@@ -108,6 +110,7 @@ async def broadcast_cv_result(
         await manager.broadcast(payload)
     except Exception:
         logger.warning(
-            "broadcast_cv_result failed for %s", plate_number,
+            "broadcast_cv_result failed for %s",
+            plate_number,
             exc_info=True,
         )
