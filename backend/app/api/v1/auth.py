@@ -15,7 +15,6 @@ from app.db.session import get_db
 from app.schemas.auth import (
     BusDashboardLoginRequest,
     BusDashboardLoginResponse,
-    ChangePasswordRequest,
     DriverLoginRequest,
     DriverLoginResponse,
     DriverLogoutRequest,
@@ -146,6 +145,30 @@ async def google_auth(
 @limiter.limit("30/minute")
 async def me(request: Request, current_user=Depends(get_current_user)):
     """Current user profile (requires JWT)."""
+    return current_user
+
+
+@router.patch("/auth/me", response_model=UserResponse)
+@limiter.limit("10/minute")
+async def update_profile(
+    request: Request,
+    body: UserUpdateRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the authenticated user's profile."""
+    if body.username is not None:
+        existing = await crud_user.get_user_by_username(db, body.username)
+        if existing and existing.id != current_user.id:
+            raise HTTPException(400, "Username already taken")
+        current_user.username = body.username
+    if body.email is not None:
+        existing = await crud_user.get_user_by_email(db, body.email)
+        if existing and existing.id != current_user.id:
+            raise HTTPException(400, "Email already taken")
+        current_user.email = body.email
+    await db.flush()
+    await db.refresh(current_user)
     return current_user
 
 
