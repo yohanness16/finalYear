@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.schemas.auth import (
     BusDashboardLoginRequest,
     BusDashboardLoginResponse,
+    ChangePasswordRequest,
     DriverLoginRequest,
     DriverLoginResponse,
     DriverLogoutRequest,
@@ -170,6 +171,26 @@ async def update_profile(
     await db.flush()
     await db.refresh(current_user)
     return current_user
+
+
+@router.post("/auth/change-password")
+@limiter.limit("10/minute")
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the authenticated user's password."""
+    if not current_user.password_hash:
+        raise HTTPException(
+            400, "Account uses Google sign-in; password cannot be changed"
+        )
+    if not pwd_context.verify(body.current_password, current_user.password_hash):
+        raise HTTPException(400, "Current password is incorrect")
+    current_user.password_hash = pwd_context.hash(body.new_password)
+    await db.flush()
+    return {"status": "password_changed"}
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)
