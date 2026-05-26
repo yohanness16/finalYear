@@ -264,7 +264,6 @@ def analyze_bus_density_from_image(
         import numpy as np
     except ImportError:
         return {
-            "human_count": 0,
             "people_count": 0,
             "crowd_density": 0,
             "is_crowded": False,
@@ -277,7 +276,6 @@ def analyze_bus_density_from_image(
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         return {
-            "human_count": 0,
             "people_count": 0,
             "crowd_density": 0,
             "is_crowded": False,
@@ -317,7 +315,6 @@ def analyze_bus_density_from_image(
         method = "fallback"
 
     return {
-        "human_count": people_count,
         "people_count": people_count,
         "crowd_density": crowd_density,
         "is_crowded": crowd_density == 2,

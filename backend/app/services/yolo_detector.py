@@ -46,11 +46,11 @@ _DEFAULT_IOU = 0.45
 # Model cache directory
 MODEL_DIR = Path(__file__).resolve().parents[2] / "storage" / "models"
 PERSON_MODEL_NAME = "yolov8n.pt"
-FACE_MODEL_NAME = "yolov8n-face.pt"   # face-specific YOLOv8 model
+FACE_MODEL_NAME = "yolov8n-face.pt"  # face-specific YOLOv8 model
 
 # Head-blob detection parameters (for top-down camera angles)
-_HEAD_MIN_AREA = 800      # minimum contour area in pixels (head blob)
-_HEAD_MAX_AREA = 25000    # maximum contour area (exclude large shadows/luggage)
+_HEAD_MIN_AREA = 800  # minimum contour area in pixels (head blob)
+_HEAD_MAX_AREA = 25000  # maximum contour area (exclude large shadows/luggage)
 _HEAD_MIN_CIRCULARITY = 0.45  # how circle-like the contour must be (head ≈ circle)
 _HEAD_ASPECT_RATIO_RANGE = (0.5, 2.0)  # w/h ratio for head-like blobs
 
@@ -95,6 +95,7 @@ def _load_person_model() -> Any:
 
         # Warm up
         import numpy as np
+
         dummy = np.zeros((64, 64, 3), dtype=np.uint8)
         _person_model.predict(dummy, verbose=False)
         logger.info("YOLOv8 person model loaded and warmed up")
@@ -149,6 +150,7 @@ def _load_face_model() -> Any:
 
         if _face_model is not None:
             import numpy as np
+
             dummy = np.zeros((64, 64, 3), dtype=np.uint8)
             _face_model.predict(dummy, verbose=False)
             logger.info("YOLOv8 face model loaded and warmed up")
@@ -163,6 +165,7 @@ def _load_face_model() -> Any:
 def _cache_model_weights(model_name: str, dest: Path) -> None:
     """Copy downloaded model weights to local cache."""
     import shutil
+
     try:
         downloaded = Path(model_name)
         if downloaded.exists():
@@ -173,13 +176,16 @@ def _cache_model_weights(model_name: str, dest: Path) -> None:
             if cached.exists():
                 shutil.copy2(cached, dest)
     except Exception:
-        logger.warning("Failed to cache model weights for %s", model_name, exc_info=True)
+        logger.warning(
+            "Failed to cache model weights for %s", model_name, exc_info=True
+        )
 
 
 def _get_device() -> str:
     """Return the best available device string for PyTorch."""
     try:
         import torch
+
         if torch.cuda.is_available():
             return "cuda:0"
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -190,6 +196,7 @@ def _get_device() -> str:
 
 
 # ── Detection functions ───────────────────────────────────────────────────────
+
 
 def _detect_full_body(frame: Any, confidence: float) -> Tuple[list, list]:
     """Run YOLOv8 person detection. Returns (boxes, scores)."""
@@ -284,12 +291,20 @@ def _detect_head_blobs(frame: Any) -> list:
     # Adaptive threshold: heads are typically darker than bus seats/floor
     # Use both polarities since hair can be light or dark
     thresh_dark = cv2.adaptiveThreshold(
-        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV, 21, 5,
+        enhanced,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        21,
+        5,
     )
     thresh_light = cv2.adaptiveThreshold(
-        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 21, 5,
+        enhanced,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        21,
+        5,
     )
 
     # Combine both thresholds (a head blob is either darker or lighter than surroundings)
@@ -429,19 +444,25 @@ def _sync_detect_persons(image_bytes: bytes, confidence: float) -> dict[str, Any
     # ── Tier 2: Face detection ──
     face_boxes, face_scores = _detect_faces(frame, _FACE_CONFIDENCE)
     # Deduplicate: remove faces that overlap with full-body detections
-    face_boxes_unique = _deduplicate_detections(person_boxes, face_boxes, iou_threshold=0.3)
+    face_boxes_unique = _deduplicate_detections(
+        person_boxes, face_boxes, iou_threshold=0.3
+    )
 
     # ── Tier 3: Head-blob detection (top-down camera angles) ──
     head_boxes = _detect_head_blobs(frame)
     # Deduplicate: remove head blobs overlapping with person or face detections
-    head_boxes_unique = _deduplicate_detections(person_boxes, head_boxes, iou_threshold=0.25)
-    head_boxes_unique = _deduplicate_detections(face_boxes_unique, head_boxes_unique, iou_threshold=0.25)
+    head_boxes_unique = _deduplicate_detections(
+        person_boxes, head_boxes, iou_threshold=0.25
+    )
+    head_boxes_unique = _deduplicate_detections(
+        face_boxes_unique, head_boxes_unique, iou_threshold=0.25
+    )
 
     elapsed_ms = (time.monotonic() - t0) * 1000.0
 
     total_people = len(person_boxes) + len(face_boxes_unique) + len(head_boxes_unique)
 
-    all_scores = person_scores + face_scores[:len(face_boxes_unique)]
+    all_scores = person_scores + face_scores[: len(face_boxes_unique)]
     mean_conf = sum(all_scores) / len(all_scores) if all_scores else 0.0
 
     method_parts = []
@@ -451,7 +472,11 @@ def _sync_detect_persons(image_bytes: bytes, confidence: float) -> dict[str, Any
         method_parts.append(f"face:{len(face_boxes_unique)}")
     if head_boxes_unique:
         method_parts.append(f"head:{len(head_boxes_unique)}")
-    method = "yolov8_multi(" + "+".join(method_parts) + ")" if method_parts else "yolov8_zero"
+    method = (
+        "yolov8_multi(" + "+".join(method_parts) + ")"
+        if method_parts
+        else "yolov8_zero"
+    )
 
     # Merge all boxes for the response (primary boxes first, then face, then head)
     all_boxes = person_boxes + face_boxes_unique + head_boxes_unique
@@ -471,6 +496,7 @@ def _sync_detect_persons(image_bytes: bytes, confidence: float) -> dict[str, Any
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
+
 class YoloDetector:
     """Multi-tier person detector: full body + face + head-blob detection.
 
@@ -489,7 +515,9 @@ class YoloDetector:
         self.confidence = confidence
         self.use_hog_fallback = use_hog_fallback
 
-    async def detect(self, image_bytes: bytes, bus_capacity: int | None = None) -> dict[str, Any]:
+    async def detect(
+        self, image_bytes: bytes, bus_capacity: int | None = None
+    ) -> dict[str, Any]:
         """Run multi-tier person detection and return structured crowd analysis.
 
         Args:
@@ -499,8 +527,7 @@ class YoloDetector:
         Returns:
             Dict with crowd analysis including per-tier detection counts:
             {
-                "human_count": int,       # total detected people
-                "people_count": int,      # same as human_count
+                "people_count": int,      # total detected people
                 "face_count": int,        # faces detected (body occluded)
                 "head_blob_count": int,   # head-only detections
                 "crowd_density": int,     # 0, 1, 2
@@ -518,7 +545,10 @@ class YoloDetector:
 
         loop = asyncio.get_running_loop()
         yolo_result = await loop.run_in_executor(
-            _executor, _sync_detect_persons, image_bytes, self.confidence,
+            _executor,
+            _sync_detect_persons,
+            image_bytes,
+            self.confidence,
         )
 
         person_count = yolo_result["person_count"]
@@ -527,8 +557,11 @@ class YoloDetector:
         # Fall back to HOG if YOLO models are unavailable
         if method == "yolov8_unavailable" and self.use_hog_fallback:
             from app.services.cv_engine import analyze_bus_density_from_image
+
             hog_result = analyze_bus_density_from_image(image_bytes, bus_capacity)
-            hog_result["method"] = f"hog_fallback ({hog_result.get('method', 'unknown')})"
+            hog_result["method"] = (
+                f"hog_fallback ({hog_result.get('method', 'unknown')})"
+            )
             hog_result["inference_ms"] = 0.0
             hog_result["boxes"] = []
             hog_result["face_boxes"] = []
@@ -547,7 +580,6 @@ class YoloDetector:
         is_crowded = crowd_density == 2
 
         return {
-            "human_count": person_count,
             "people_count": person_count,
             "face_count": yolo_result.get("face_count", 0),
             "head_blob_count": yolo_result.get("head_blob_count", 0),
@@ -589,6 +621,9 @@ def _quick_foreground_ratio(image_bytes: bytes) -> float:
 
 # ── Module-level convenience function ──────────────────────────────────────────
 
-async def detect_persons(image_bytes: bytes, bus_capacity: int | None = None) -> dict[str, Any]:
+
+async def detect_persons(
+    image_bytes: bytes, bus_capacity: int | None = None
+) -> dict[str, Any]:
     """One-shot async person detection using the global detector."""
     return await YoloDetector().detect(image_bytes, bus_capacity)
