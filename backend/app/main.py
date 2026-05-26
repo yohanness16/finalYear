@@ -15,6 +15,7 @@ from app.api.v1 import (
     favorites,
     gateway,
     notifications,
+    pairing,
     routes,
     search,
     tracking,
@@ -118,3 +119,4 @@ app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
 app.include_router(search.router, prefix="/api/v1", tags=["search"])
 app.include_router(favorites.router, prefix="/api/v1", tags=["favorites"])
 app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
+app.include_router(pairing.router, prefix="/api/v1", tags=["pairing"])
