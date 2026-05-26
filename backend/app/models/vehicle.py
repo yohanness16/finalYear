@@ -25,6 +25,7 @@ class Vehicle(Base):
 
     speed = Column(Float, nullable=True)
     position_updated_at = Column(DateTime(timezone=True), nullable=True)
+    dashboard_password_hash = Column(String(255), nullable=True)
 
     assignments = relationship("Assignment", back_populates="vehicle")
     raw_telemetry = relationship("RawTelemetry", back_populates="vehicle")
