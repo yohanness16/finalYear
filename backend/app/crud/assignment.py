@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.assignment import Assignment
-from app.models.vehicle import Vehicle
 
 
 async def get_active_assignment_by_driver(
