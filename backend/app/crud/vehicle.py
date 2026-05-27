@@ -119,13 +119,6 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
 
 
 async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
-    active_assignment_id = (
-        select(Assignment.id)
-        .where(Assignment.vehicle_id == Vehicle.id, Assignment.status == "active")
-        .order_by(Assignment.start_time.desc())
-        .limit(1)
-        .scalar_subquery()
-    )
     result = await db.execute(
         select(
             Vehicle.id,
@@ -135,8 +128,10 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
             Vehicle.speed,
             Vehicle.route_id,
             Vehicle.position_updated_at,
-            active_assignment_id.label("assignment_id"),
-        ).where(Vehicle.id == vehicle_id)
+            Assignment.id.label("assignment_id"),
+        )
+        .outerjoin(Assignment, (Assignment.vehicle_id == Vehicle.id) & (Assignment.status == "active"))
+        .where(Vehicle.id == vehicle_id)
     )
     row = result.first()
     if not row:
