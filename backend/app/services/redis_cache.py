@@ -175,8 +175,14 @@ async def get_cv_result(
         if raw is None:
             result[k] = defaults.get(k, None) if defaults else None
             continue
-        if k in ("occupancy_level", "people_count", "crowd_density", "updated_at",
-                 "face_count", "head_blob_count"):
+        if k in (
+            "occupancy_level",
+            "people_count",
+            "crowd_density",
+            "updated_at",
+            "face_count",
+            "head_blob_count",
+        ):
             result[k] = int(raw)
         elif k == "confidence":
             result[k] = float(raw)

@@ -34,11 +34,13 @@ async def test_register_sends_verification_token(
     client: AsyncClient, fake_redis: FakeRedis
 ):
     """Register should create user with is_verified=False."""
+    import uuid
+    suffix = uuid.uuid4().hex[:8]
     resp = await client.post(
         "/api/v1/auth/register",
         json={
-            "username": "verifytest",
-            "email": "verify@test.com",
+            "username": f"verifytest_{suffix}",
+            "email": f"verify_{suffix}@test.com",
             "password": "Password123!",
         },
     )
