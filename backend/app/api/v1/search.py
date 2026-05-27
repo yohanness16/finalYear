@@ -49,6 +49,9 @@ async def point_to_point_search(
     """
     Find routes passing through start and end stops.
     Returns routes with pre-calculated bus ETAs and matching live buses.
+
+    Only buses that are on an active assignment, heading in the correct
+    direction, and have not yet passed the start stop are included.
     """
     start = await crud_route.get_stop_by_id(db, body.start_stop_id)
     end = await crud_route.get_stop_by_id(db, body.end_stop_id)
@@ -85,9 +88,94 @@ async def point_to_point_search(
             if live_eta is not None:
                 data["eta_live_seconds"] = live_eta
 
-        route_buses = [
-            bus for bus in live_positions.values() if bus.get("route_id") == route.id
-        ]
+        # Get ordered stops for direction/position filtering
+        route_stops = await crud_route.get_route_stops_ordered(db, route.id)
+        stop_index = {s.id: idx for idx, s in enumerate(route_stops)} if route_stops else {}
+        start_idx = stop_index.get(body.start_stop_id, 0)
+        end_idx = stop_index.get(body.end_stop_id, len(route_stops) - 1) if route_stops else 0
+        forward_direction = start_idx <= end_idx
+
+        route_buses = []
+        for bus in live_positions.values():
+            if bus.get("route_id") != route.id:
+                continue
+            lat = bus.get("lat")
+            lon = bus.get("lon")
+            if lat is None or lon is None:
+                continue
+
+            # Stale position check
+            pos_ts = bus.get("timestamp")
+            if pos_ts is not None:
+                try:
+                    age = time.time() - float(pos_ts)
+                except (TypeError, ValueError):
+                    continue
+                settings_local = get_settings()
+                max_age = int(settings_local.LIVE_POSITION_MAX_AGE_SECONDS or 0)
+                if max_age > 0 and age > max_age:
+                    continue
+
+            # Direction and position filtering
+            bus_idx = nearest_stop_index(float(lat), float(lon), route_stops) if route_stops else 0
+
+            plate_number = bus.get("plate_number", "")
+            direction = None
+            if plate_number:
+                try:
+                    recent_coords = await get_recent_coords(plate_number)
+                    direction = infer_bus_direction(recent_coords, route_stops)
+                except Exception:
+                    direction = None
+
+            if direction is None:
+                continue
+            if forward_direction:
+                if direction < 0 or bus_idx > start_idx:
+                    continue
+            else:
+                if direction > 0 or bus_idx < start_idx:
+                    continue
+
+            # Compute ETA from bus to the start stop
+            eta_to_start = 0
+            eta_live_to_start = None
+            if route_stops:
+                eta_stops = route_stops if forward_direction else list(reversed(route_stops))
+                eta_payloads = estimate_route_stop_eta_payloads(
+                    float(lat), float(lon),
+                    float(bus.get("speed") or 0.0),
+                    int(bus.get("occupancy_level", 0)),
+                    route.route_number, route.id,
+                    eta_stops,
+                    plate_number=plate_number,
+                    vehicle_id=bus.get("vehicle_id"),
+                )
+                start_payload = eta_payloads.get(body.start_stop_id)
+                if start_payload:
+                    try:
+                        eta_to_start = int(float(start_payload.get("eta_seconds", 0)))
+                    except (TypeError, ValueError):
+                        eta_to_start = 0
+                    eta_live_to_start = compute_live_eta(
+                        start_payload.get("eta_seconds", 0),
+                        start_payload.get("computed_at", 0),
+                    )
+
+            route_buses.append(
+                {
+                    "vehicle_id": bus.get("vehicle_id"),
+                    "plate_number": plate_number,
+                    "lat": float(lat),
+                    "lon": float(lon),
+                    "speed": float(bus.get("speed") or 0.0),
+                    "route_id": route.id,
+                    "assignment_id": bus.get("assignment_id"),
+                    "occupancy_level": int(bus.get("occupancy_level", 0)),
+                    "eta_to_start_stop": eta_to_start,
+                    "eta_live_to_start_stop": eta_live_to_start,
+                }
+            )
 
         entry: dict = {
             "route_number": route.route_number,
@@ -215,6 +303,20 @@ async def journey_search(
                 eta_data.get("eta_seconds", 0), eta_data.get("computed_at", 0)
             )
 
+            # ETA from bus to the user's nearest boarding stop
+            start_eta_data = eta_payloads.get(start_stop.id)
+            start_eta_seconds = 0
+            start_eta_live = None
+            if start_eta_data:
+                try:
+                    start_eta_seconds = int(float(start_eta_data.get("eta_seconds", 0)))
+                except (TypeError, ValueError):
+                    start_eta_seconds = 0
+                start_eta_live = compute_live_eta(
+                    start_eta_data.get("eta_seconds", 0),
+                    start_eta_data.get("computed_at", 0),
+                )
+
             route_buses.append(
                 {
                     "vehicle_id": bus.get("vehicle_id"),
@@ -231,6 +333,8 @@ async def journey_search(
                     "eta_ml_seconds": eta_data.get("eta_ml_seconds"),
                     "eta_heuristic_seconds": eta_data.get("eta_heuristic_seconds"),
                     "distance_m": eta_data.get("distance_m"),
+                    "eta_to_start_stop": start_eta_seconds,
+                    "eta_live_to_start_stop": start_eta_live,
                 }
             )
 

@@ -55,7 +55,12 @@ async def get_vehicle_with_positions(
 
 
 async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
-    """Positions keyed by vehicle id (string) for JSON stability."""
+    """Positions keyed by vehicle id (string) for JSON stability.
+
+    Only returns vehicles that have an active assignment — buses whose
+    driver has not ended their journey are excluded so the mobile app
+    sees only buses that are actually serving the route right now.
+    """
     active_assignment_id = (
         select(Assignment.id)
         .where(Assignment.vehicle_id == Vehicle.id, Assignment.status == "active")
@@ -74,6 +79,11 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
             Vehicle.position_updated_at,
             active_assignment_id.label("assignment_id"),
         )
+        .join(Assignment, Assignment.vehicle_id == Vehicle.id)
+        .where(Assignment.status == "active")
+        .group_by(Vehicle.id, Vehicle.plate_number, Vehicle.last_lat,
+                  Vehicle.last_lon, Vehicle.speed, Vehicle.route_id,
+                  Vehicle.position_updated_at, Assignment.id)
     )
     rows = result.all()
     out: dict[str, dict] = {}

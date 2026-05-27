@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.assignment import Assignment
+from app.models.vehicle import Vehicle
 
 
 async def get_active_assignment_by_driver(
@@ -61,13 +62,33 @@ async def create_assignment(
 
 
 async def end_assignment(db: AsyncSession, assignment_id: int) -> Assignment | None:
-    result = await db.execute(select(Assignment).where(Assignment.id == assignment_id))
+    result = await db.execute(
+        select(Assignment)
+        .where(Assignment.id == assignment_id)
+        .options(selectinload(Assignment.vehicle), selectinload(Assignment.route))
+    )
     assignment = result.scalar_one_or_none()
     if assignment:
         assignment.status = "completed"
         assignment.end_time = datetime.now(UTC)
         await db.flush()
         await db.refresh(assignment)
+
+        # Clear all live Redis data for this bus so it immediately
+        # disappears from mobile search results.
+        plate = getattr(assignment.vehicle, "plate_number", None) if assignment.vehicle else None
+        route_number = getattr(assignment.route, "route_number", None) if assignment.route else None
+        if plate:
+            try:
+                from app.utils.redis_client import clear_bus_live_data
+                await clear_bus_live_data(plate, route_number)
+            except Exception:
+                import logging
+                logging.exception(
+                    "clear_bus_live_data failed for plate %s on assignment %s",
+                    plate,
+                    assignment_id,
+                )
     return assignment
 
 

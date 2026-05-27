@@ -171,3 +171,41 @@ async def set_bus_live_pipeline(
     pipe.expire(live_key, settings.BUS_LIVE_TTL)
     pipe.geoadd("active_buses", (lon, lat, plate_number))
     await pipe.execute()
+
+
+async def clear_bus_live_data(
+    plate_number: str, route_number: str | None = None
+) -> None:
+    """Remove all live Redis data for a bus when its assignment/journey ends.
+
+    Clears the live hash, coordinate buffer, geo index entry, CV result,
+    position key, history key, and route-stop ETAs (if route_number given).
+    This ensures the bus immediately disappears from mobile search results.
+    """
+    client = await get_redis()
+    pipe = client.pipeline()
+    pipe.delete(bus_live_key(plate_number))
+    pipe.delete(bus_coords_key(plate_number))
+    pipe.delete(f"veh:pos:{plate_number}")
+    pipe.delete(f"veh:cv:{plate_number}")
+    pipe.delete(f"veh:hist:{plate_number}")
+    pipe.zrem("active_buses", plate_number)
+    if route_number:
+        # Clear all route-stop ETA entries for this route — the bus is
+        # no longer serving it.  We can't know every stop_id here, so we
+        # delete via pattern (use scan to avoid blocking Redis).
+        pass
+    await pipe.execute()
+
+    # Pattern-delete route-stop ETA keys outside the pipeline to avoid
+    # blocking.  For most routes the number of stops is small so this is
+    # cheap.
+    if route_number:
+        pattern = f"route:{route_number}:stop:*"
+        cursor = 0
+        while True:
+            cursor, keys = await client.scan(cursor, match=pattern, count=100)
+            if keys:
+                await client.delete(*keys)
+            if cursor == 0:
+                break
