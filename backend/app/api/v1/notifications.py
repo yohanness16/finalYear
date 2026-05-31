@@ -1,12 +1,14 @@
 """Notification settings for proximity alerts."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.notification_setting import NotificationSetting
+from app.models.user import User
 from app.schemas.tracking import NotificationSettingCreate
 from app.utils.redis_client import get_redis
 
@@ -20,11 +22,17 @@ class FcmTokenRequest(BaseModel):
 
 @router.post("/notifications/settings")
 async def set_notification(
-    body: NotificationSettingCreate, db: AsyncSession = Depends(get_db)
+    body: NotificationSettingCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
+    """Create a proximity alert for a specific route and optional stop."""
+    if body.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Can only set notification settings for yourself")
     ns = NotificationSetting(
         user_id=body.user_id,
         route_id=body.route_id,
+        stop_id=body.stop_id,
         lead_time_minutes=body.lead_time_minutes,
     )
     db.add(ns)

@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -40,11 +41,33 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown."""
+    logger = logging.getLogger("uvicorn")
+
     # Start Redis Pub/Sub subscriber for cross-worker WebSocket broadcast
     await ws_manager.start()
-    logger = logging.getLogger("uvicorn")
-    logger.info("WebSocket Redis subscriber starting (pid=%d)", os.getpid() if hasattr(os, "getpid") else 0)
+    logger.info(
+        "WebSocket Redis subscriber starting (pid=%d)",
+        os.getpid() if hasattr(os, "getpid") else 0,
+    )
+
+    # Start push notification background worker (if FCM key configured)
+    notif_task: asyncio.Task | None = None
+    if settings.FCM_SERVER_KEY and settings.FCM_SERVER_KEY != "xxx":
+        from app.tasks.notifications import notification_worker
+        notif_task = asyncio.create_task(notification_worker())
+        logger.info("Push notification worker started")
+    else:
+        logger.info("Push notification worker disabled (no FCM_SERVER_KEY)")
+
     yield
+
+    # Shutdown
+    if notif_task:
+        notif_task.cancel()
+        try:
+            await notif_task
+        except asyncio.CancelledError:
+            pass
     await ws_manager.stop()
     await close_redis()
     await close_redis_cache()

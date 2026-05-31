@@ -77,4 +77,5 @@ class RatingCreate(BaseModel):
 class NotificationSettingCreate(BaseModel):
     user_id: int
     route_id: int
+    stop_id: int | None = None
     lead_time_minutes: int = 10
