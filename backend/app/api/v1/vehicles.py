@@ -3,7 +3,7 @@
 import re
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
@@ -124,6 +124,7 @@ async def admin_update_vehicle(
 @router.post("/vehicles/telemetry")
 @limiter.limit("300/minute")
 async def receive_telemetry(
+    request: Request,
     data: TelemetryInput,
     db: AsyncSession = Depends(get_db),
 ):
