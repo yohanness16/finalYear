@@ -50,6 +50,10 @@ class ConnectionManager:
         # Whether the subscription loop is running
         self._running = False
 
+    @property
+    def active_connections(self) -> set[WebSocket]:
+        return self._local_connections
+
     async def start(self):
         """Start the Redis subscriber background task. Called once on app startup."""
         if self._running:
@@ -98,6 +102,15 @@ class ConnectionManager:
             route_id,
             len(self._local_connections),
         )
+
+    async def connect(self, websocket: WebSocket) -> None:
+        """Backwards-compatible connect helper used by tests and older callers."""
+        await websocket.accept()
+        self.register(websocket)
+
+    async def broadcast(self, message: dict) -> None:
+        """Backwards-compatible broadcast helper that sends locally."""
+        await self._forward_to_locals("legacy", message)
 
     def disconnect(self, websocket: WebSocket) -> None:
         self._local_connections.discard(websocket)
@@ -175,7 +188,10 @@ class ConnectionManager:
         for ws in self._local_connections:
             try:
                 # Mobile filtering: only send positions for subscribed route
-                sub_route = ws.scope.get("subscribed_route_id")
+                scope = getattr(ws, "scope", {})
+                if not isinstance(scope, dict):
+                    scope = {}
+                sub_route = scope.get("subscribed_route_id")
                 if sub_route is not None and channel == CHANNEL_VEHICLE_POSITION:
                     pos_route = data.get("route_id")
                     if pos_route is not None and pos_route != sub_route:
