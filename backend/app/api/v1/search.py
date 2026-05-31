@@ -162,6 +162,20 @@ async def point_to_point_search(
                         start_payload.get("computed_at", 0),
                     )
 
+            # ETA from bus to the end stop (total trip duration)
+            eta_to_end = 0
+            eta_live_to_end = None
+            end_payload = eta_payloads.get(body.end_stop_id)
+            if end_payload:
+                try:
+                    eta_to_end = int(float(end_payload.get("eta_seconds", 0)))
+                except (TypeError, ValueError):
+                    eta_to_end = 0
+                eta_live_to_end = compute_live_eta(
+                    end_payload.get("eta_seconds", 0),
+                    end_payload.get("computed_at", 0),
+                )
+
             route_buses.append(
                 {
                     "vehicle_id": bus.get("vehicle_id"),
@@ -174,6 +188,8 @@ async def point_to_point_search(
                     "occupancy_level": int(bus.get("occupancy_level", 0)),
                     "eta_to_start_stop": eta_to_start,
                     "eta_live_to_start_stop": eta_live_to_start,
+                    "eta_to_end_stop": eta_to_end,
+                    "eta_live_to_end_stop": eta_live_to_end,
                 }
             )
 
