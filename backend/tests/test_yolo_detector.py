@@ -215,6 +215,8 @@ class TestBroadcastPayloadShape:
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
             mock_mgr.broadcast = AsyncMock()
+            from app.services.websocket import CHANNEL_VEHICLE_POSITION
+
             await broadcast_vehicle_position(
                 vehicle_id=1,
                 plate_number="TEST-001",
@@ -224,7 +226,10 @@ class TestBroadcastPayloadShape:
                 route_id=5,
                 occupancy_level=2,
             )
-            payload = mock_mgr.broadcast.call_args[0][0]
+            mock_mgr.publish.assert_called_once()
+            channel = mock_mgr.publish.call_args[0][0]
+            payload = mock_mgr.publish.call_args[0][1]
+            assert channel == CHANNEL_VEHICLE_POSITION
             assert payload["type"] == "vehicle_position"
             assert payload["occupancy_level"] == 2
 
@@ -232,9 +237,10 @@ class TestBroadcastPayloadShape:
     async def test_broadcast_vehicle_position_without_occupancy(self):
         """When occupancy_level is None, occupancy_level should not be present."""
         from app.services.live_broadcast import broadcast_vehicle_position
+        from app.services.websocket import CHANNEL_VEHICLE_POSITION
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
-            mock_mgr.broadcast = AsyncMock()
+            mock_mgr.publish = AsyncMock()
             await broadcast_vehicle_position(
                 vehicle_id=1,
                 plate_number="TEST-001",
@@ -244,23 +250,27 @@ class TestBroadcastPayloadShape:
                 route_id=5,
                 occupancy_level=None,
             )
-            payload = mock_mgr.broadcast.call_args[0][0]
+            mock_mgr.publish.assert_called_once()
+            channel = mock_mgr.publish.call_args[0][0]
+            payload = mock_mgr.publish.call_args[0][1]
+            assert channel == CHANNEL_VEHICLE_POSITION
             assert "occupancy_level" not in payload
 
     @pytest.mark.asyncio
     async def test_broadcast_cv_result_shape(self):
         """cv_result must include all fields expected by frontend CvData type."""
         from app.services.live_broadcast import broadcast_cv_result
+        from app.services.websocket import CHANNEL_CV_RESULT
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
-            mock_mgr.broadcast = AsyncMock()
+            mock_mgr.publish = AsyncMock()
             cv_result = {
                 "people_count": 12,
                 "face_count": 3,
                 "head_blob_count": 1,
                 "crowd_density": 2,
                 "is_crowded": True,
-                "method": "yolov8_multi(person:8+face:3+head:1)",
+                "method": "yolov8_multi(person:8+face+3+head:1)",
                 "confidence": 0.92,
                 "foreground_ratio": 0.0,
                 "boxes": [[10, 20, 50, 80]],
@@ -273,13 +283,16 @@ class TestBroadcastPayloadShape:
                 cv_result=cv_result,
                 image_path="storage/esp32_images/test.jpg",
             )
-            payload = mock_mgr.broadcast.call_args[0][0]
+            mock_mgr.publish.assert_called_once()
+            channel = mock_mgr.publish.call_args[0][0]
+            payload = mock_mgr.publish.call_args[0][1]
+            assert channel == CHANNEL_CV_RESULT
             assert payload["type"] == "cv_result"
             cv = payload["cv"]
             assert cv["people_count"] == 12
             assert cv["crowd_density"] == 2
             assert cv["is_crowded"] is True
-            assert cv["method"] == "yolov8_multi(person:8+face:3+head:1)"
+            assert cv["method"] == "yolov8_multi(person:8+face+3+head:1)"
             assert cv["confidence"] == 0.92
             assert cv["foreground_ratio"] == 0.0
             assert payload["image_path"] == "storage/esp32_images/test.jpg"
@@ -288,15 +301,19 @@ class TestBroadcastPayloadShape:
     async def test_broadcast_cv_result_defaults(self):
         """cv_result with missing fields should use safe defaults."""
         from app.services.live_broadcast import broadcast_cv_result
+        from app.services.websocket import CHANNEL_CV_RESULT
 
         with patch("app.services.live_broadcast.manager") as mock_mgr:
-            mock_mgr.broadcast = AsyncMock()
+            mock_mgr.publish = AsyncMock()
             await broadcast_cv_result(
                 vehicle_id=1,
                 plate_number="TEST-001",
                 cv_result={},  # empty
             )
-            payload = mock_mgr.broadcast.call_args[0][0]
+            mock_mgr.publish.assert_called_once()
+            channel = mock_mgr.publish.call_args[0][0]
+            payload = mock_mgr.publish.call_args[0][1]
+            assert channel == CHANNEL_CV_RESULT
             cv = payload["cv"]
             assert cv["people_count"] == 0
             assert cv["crowd_density"] == 0
