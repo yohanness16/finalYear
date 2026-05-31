@@ -11,11 +11,25 @@ from app.models.rating import Rating
 from app.models.user import User
 from app.schemas.tracking import FavoriteCreate, RatingCreate
 
+
+async def _require_owner_or_admin(
+    body_user_id: int,
+    current_user: User,
+) -> None:
+    """Raise 403 if the user does not own the resource and is not admin."""
+    if body_user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Can only modify your own data")
+
 router = APIRouter()
 
 
 @router.post("/favorites")
-async def add_favorite(body: FavoriteCreate, db: AsyncSession = Depends(get_db)):
+async def add_favorite(
+    body: FavoriteCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_owner_or_admin(body.user_id, current_user)
     fav = Favorite(user_id=body.user_id, route_id=body.route_id, nickname=body.nickname)
     db.add(fav)
     await db.flush()
@@ -52,7 +66,12 @@ async def delete_favorite(
 
 
 @router.post("/ratings")
-async def add_rating(body: RatingCreate, db: AsyncSession = Depends(get_db)):
+async def add_rating(
+    body: RatingCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    _require_owner_or_admin(body.user_id, current_user)
     if not 1 <= body.score <= 5:
         raise HTTPException(400, "Score must be 1-5")
     rating = Rating(

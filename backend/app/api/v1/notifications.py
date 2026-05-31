@@ -42,7 +42,13 @@ async def set_notification(
 
 
 @router.get("/notifications/settings/{user_id}")
-async def get_notification_settings(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_notification_settings(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Can only view your own notification settings")
     result = await db.execute(
         select(NotificationSetting).where(NotificationSetting.user_id == user_id)
     )
@@ -50,8 +56,13 @@ async def get_notification_settings(user_id: int, db: AsyncSession = Depends(get
 
 
 @router.post("/notifications/register-token")
-async def register_fcm_token(body: FcmTokenRequest):
+async def register_fcm_token(
+    body: FcmTokenRequest,
+    current_user: User = Depends(get_current_user),
+):
     """Register an FCM device token for push notifications."""
+    if body.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Can only register tokens for yourself")
     redis = await get_redis()
     await redis.set(f"fcm:{body.user_id}", body.token, ex=2592000)
     return {"status": "registered"}
