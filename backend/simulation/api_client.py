@@ -63,7 +63,7 @@ class APIClient:
     def create_admin_user(self, username: str, email: str, password: str, role: str) -> Optional[dict]:
         try:
             r = self.client.post(
-                f"{self.base_url}/admin/users",
+                f"{self.base_url}/admin/users/create",
                 json={"username": username, "email": email, "password": password, "role": role},
                 headers=self._json_headers(),
             )

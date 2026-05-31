@@ -316,9 +316,10 @@ class PassengerSimulator:
     def check_positions(self) -> bool:
         """Check live bus positions."""
         try:
-            positions = self.client.get("/vehicles/positions") or {}
-            if positions:
-                count = len(positions)
+            envelope = self.client.get("/vehicles/positions") or {}
+            if envelope:
+                pos_dict = envelope.get("positions", {}) if isinstance(envelope, dict) else {}
+                count = len(pos_dict)
                 self.log(f"📍 Live buses: {count}")
                 return True
         except Exception:
@@ -326,27 +327,23 @@ class PassengerSimulator:
         return False
 
     def check_crowd_density(self) -> bool:
-        """Check crowd density for a random vehicle."""
+        """Check crowd density for a random vehicle via live positions."""
         try:
-            vehicles = self.client.get("/vehicles?skip=0&limit=20") or []
-            if vehicles:
-                vehicle = random.choice(vehicles)
-                plate = vehicle.get("plate_number")
-                if plate:
-                    cv = self.client.get(f"/admin/crowd/{plate}")
-                    if cv:
-                        density = cv.get("cv", {}).get("crowd_density", "?")
-                        people = cv.get("cv", {}).get("people_count", "?")
-                        self.log(f"👥 Crowd {plate}: density={density} people={people}")
-                    else:
-                        self.log(f"👥 No CV data for {plate}")
-                    return True
+            envelope = self.client.get("/vehicles/positions") or {}
+            pos_dict = envelope.get("positions", {}) if isinstance(envelope, dict) else {}
+            if pos_dict:
+                pos = random.choice(list(pos_dict.values()))
+                plate = pos.get("plate_number", "?")
+                occ = pos.get("occupancy_level", 0)
+                occ_label = ["empty", "medium", "crowded"][min(occ, 2)]
+                self.log(f"👥 {plate}: {occ_label} (occupancy={occ})")
+                return True
         except Exception:
             pass
         return False
 
     def search_journey(self) -> bool:
-        """Search for a journey."""
+        """Search for a journey using geo coordinates."""
         try:
             stops = self.client.get("/stops?skip=0&limit=40")
             if not stops or len(stops) < 2:
@@ -356,14 +353,18 @@ class PassengerSimulator:
             to_stop = random.choice(stops[len(stops)//2:])
 
             payload = {
-                "from_stop_id": from_stop.get("id"),
-                "to_stop_id": to_stop.get("id"),
+                "start_lat": from_stop.get("lat"),
+                "start_lon": from_stop.get("lon"),
+                "end_lat": to_stop.get("lat"),
+                "end_lon": to_stop.get("lon"),
+                "max_routes": 3,
+                "max_buses": 4,
             }
 
-            result = self.client.post("/search/point-to-point", payload)
+            result = self.client.post("/search/journey", payload)
             if result:
-                options = result.get("options", [])
-                self.log(f"🗺️  Journey search: {len(options)} options")
+                routes = result.get("routes", [])
+                self.log(f"🗺️  Journey search: {len(routes)} routes found")
                 return True
         except Exception as e:
             self.log(f"Journey error: {e}")
@@ -377,7 +378,15 @@ class PassengerSimulator:
                 return False
 
             route = random.choice(routes)
-            payload = {"route_id": route.get("id")}
+            me = self.client.get("/auth/me")
+            user_id = me.get("id") if me else None
+            if not user_id:
+                return False
+            payload = {
+                "user_id": user_id,
+                "route_id": route.get("id"),
+                "nickname": random.choice(["Work commute", "Home route", "Daily bus", "My route"]),
+            }
             result = self.client.post("/favorites", payload)
             if result:
                 self.log(f"⭐ Saved favorite route")
@@ -389,15 +398,18 @@ class PassengerSimulator:
     def rate_journey(self) -> bool:
         """Rate a completed journey."""
         try:
-            rating = random.randint(1, 5)
+            me = self.client.get("/auth/me")
+            user_id = me.get("id") if me else None
+            score = random.randint(1, 5)
             payload = {
+                "user_id": user_id or 1,
                 "assignment_id": random.randint(1, 100),
-                "rating": rating,
-                "comment": "Good service!" if rating >= 4 else "Could be better",
+                "score": score,
+                "comment": "Good service!" if score >= 4 else "Could be better",
             }
             result = self.client.post("/ratings", payload)
             if result:
-                self.log(f"⭐ Rated journey: {rating}/5")
+                self.log(f"⭐ Rated journey: {score}/5")
                 return True
         except Exception:
             pass
@@ -443,10 +455,10 @@ def monitor_dashboard(admin_client: APIClient, duration: float, check_interval: 
             summary = admin_client.get("/admin/dashboard/summary")
             if summary:
                 active = summary.get("active_assignments", 0)
-                total_telemetry = summary.get("total_telemetry_points", 0)
+                total_telemetry = summary.get("telemetry_last_24h", 0)
                 print(
                     f"  [Monitor] 📊 Dashboard: "
-                    f"active_trips={active}, telemetry_points={total_telemetry}"
+                    f"active_trips={active}, telemetry_24h={total_telemetry}"
                 )
                 check_count += 1
         except Exception:

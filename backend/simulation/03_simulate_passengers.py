@@ -151,6 +151,7 @@ class PassengerSimulator:
                 vehicle = random.choice(vehicles)
                 plate = vehicle.get("plate_number")
                 if plate:
+                    # Admin-only endpoint — may fail for passenger accounts
                     cv = self.client.get(f"/admin/crowd/{plate}")
                     if cv:
                         density = cv.get("cv", {}).get("crowd_density", 0)
@@ -158,7 +159,17 @@ class PassengerSimulator:
                         density_label = ["empty", "medium", "crowded"][min(density, 2)]
                         self.log(f"👥 {plate}: {density_label} ({people} people)")
                     else:
-                        self.log(f"👥 {plate}: no CV data yet")
+                        # Fallback: check live positions for occupancy data
+                        positions = self.client.get("/vehicles/positions") or {}
+                        pos_dict = positions.get("positions", {}) if isinstance(positions, dict) else {}
+                        for pos in pos_dict.values():
+                            if pos.get("plate_number") == plate:
+                                occ = pos.get("occupancy_level", 0)
+                                occ_label = ["empty", "medium", "crowded"][min(occ, 2)]
+                                self.log(f"👥 {plate}: {occ_label} (from live position)")
+                                break
+                        else:
+                            self.log(f"👥 {plate}: no CV data yet")
         except Exception:
             pass
 

@@ -142,52 +142,52 @@
     {
       "plate_number": "AA-3-B12345",
       "device_id": "IMEI001234567890",
-      "id": 16
+      "id": 45
     },
     {
       "plate_number": "AA-3-C23456",
       "device_id": "IMEI002345678901",
-      "id": 17
+      "id": 46
     },
     {
       "plate_number": "AA-3-D34567",
       "device_id": "IMEI003456789012",
-      "id": 18
+      "id": 47
     },
     {
       "plate_number": "AA-3-E45678",
       "device_id": "IMEI004567890123",
-      "id": 19
+      "id": 48
     },
     {
       "plate_number": "AA-3-F56789",
       "device_id": "IMEI005678901234",
-      "id": 20
+      "id": 49
     },
     {
       "plate_number": "AA-3-G67890",
       "device_id": "IMEI006789012345",
-      "id": 21
+      "id": 50
     },
     {
       "plate_number": "AA-3-H78901",
       "device_id": "IMEI007890123456",
-      "id": 22
+      "id": 51
     },
     {
       "plate_number": "AA-3-I89012",
       "device_id": "IMEI008901234567",
-      "id": 23
+      "id": 52
     },
     {
       "plate_number": "AA-3-J90123",
       "device_id": "IMEI009012345678",
-      "id": 24
+      "id": 53
     },
     {
       "plate_number": "AA-3-K01234",
       "device_id": "IMEI010123456789",
-      "id": 25
+      "id": 54
     }
   ],
   "routes": {
@@ -198,42 +198,42 @@
       "stops": [
         {
           "name": "Megenagna",
-          "id": 116,
+          "id": 194,
           "lat": 9.0267,
           "lon": 38.7613,
           "is_terminal": true
         },
         {
           "name": "Bole Michael",
-          "id": 117,
+          "id": 195,
           "lat": 9.0198,
           "lon": 38.7556,
           "is_terminal": false
         },
         {
           "name": "Bole Road",
-          "id": 118,
+          "id": 196,
           "lat": 9.0144,
           "lon": 38.7504,
           "is_terminal": false
         },
         {
           "name": "Awareness",
-          "id": 119,
+          "id": 197,
           "lat": 9.0065,
           "lon": 38.7461,
           "is_terminal": false
         },
         {
           "name": "CMC",
-          "id": 120,
+          "id": 198,
           "lat": 9.0011,
           "lon": 38.7423,
           "is_terminal": false
         },
         {
           "name": "Mexico",
-          "id": 121,
+          "id": 199,
           "lat": 8.9956,
           "lon": 38.7385,
           "is_terminal": true
@@ -247,35 +247,35 @@
       "stops": [
         {
           "name": "Stadium",
-          "id": 122,
+          "id": 200,
           "lat": 9.0086,
           "lon": 38.761,
           "is_terminal": true
         },
         {
           "name": "Gofa Mebrat",
-          "id": 123,
+          "id": 201,
           "lat": 9.0013,
           "lon": 38.7678,
           "is_terminal": false
         },
         {
           "name": "Kaliti",
-          "id": 124,
+          "id": 202,
           "lat": 8.9942,
           "lon": 38.7745,
           "is_terminal": false
         },
         {
           "name": "Akaki",
-          "id": 125,
+          "id": 203,
           "lat": 8.9875,
           "lon": 38.781,
           "is_terminal": false
         },
         {
           "name": "Ayat",
-          "id": 126,
+          "id": 204,
           "lat": 8.9803,
           "lon": 38.788,
           "is_terminal": true
@@ -289,35 +289,35 @@
       "stops": [
         {
           "name": "Merkato",
-          "id": 127,
+          "id": 205,
           "lat": 9.0193,
           "lon": 38.7356,
           "is_terminal": true
         },
         {
           "name": "Piassa",
-          "id": 128,
+          "id": 206,
           "lat": 9.0245,
           "lon": 38.7408,
           "is_terminal": false
         },
         {
           "name": "Arada",
-          "id": 129,
+          "id": 207,
           "lat": 9.0297,
           "lon": 38.7461,
           "is_terminal": false
         },
         {
           "name": "Wavel",
-          "id": 130,
+          "id": 208,
           "lat": 9.021,
           "lon": 38.752,
           "is_terminal": false
         },
         {
           "name": "Bole Airport",
-          "id": 131,
+          "id": 209,
           "lat": 9.035,
           "lon": 38.799,
           "is_terminal": true
@@ -331,35 +331,35 @@
       "stops": [
         {
           "name": "Saris",
-          "id": 132,
+          "id": 210,
           "lat": 8.992,
           "lon": 38.72,
           "is_terminal": true
         },
         {
           "name": "Gotera",
-          "id": 133,
+          "id": 211,
           "lat": 9.0001,
           "lon": 38.7262,
           "is_terminal": false
         },
         {
           "name": "Tor Hailoch",
-          "id": 134,
+          "id": 212,
           "lat": 9.0078,
           "lon": 38.732,
           "is_terminal": false
         },
         {
           "name": "Arat Kilo",
-          "id": 135,
+          "id": 213,
           "lat": 9.0156,
           "lon": 38.738,
           "is_terminal": false
         },
         {
           "name": "Piassa",
-          "id": 128,
+          "id": 206,
           "lat": 9.0245,
           "lon": 38.7408,
           "is_terminal": true
@@ -373,35 +373,35 @@
       "stops": [
         {
           "name": "Kazanchis",
-          "id": 136,
+          "id": 214,
           "lat": 9.0167,
           "lon": 38.7631,
           "is_terminal": true
         },
         {
           "name": "Bole Bridge",
-          "id": 137,
+          "id": 215,
           "lat": 9.0133,
           "lon": 38.758,
           "is_terminal": false
         },
         {
           "name": "Bambis",
-          "id": 138,
+          "id": 216,
           "lat": 9.0101,
           "lon": 38.7529,
           "is_terminal": false
         },
         {
           "name": "Stadium",
-          "id": 122,
+          "id": 200,
           "lat": 9.0086,
           "lon": 38.761,
           "is_terminal": false
         },
         {
           "name": "Lideta",
-          "id": 139,
+          "id": 217,
           "lat": 9.0048,
           "lon": 38.749,
           "is_terminal": true
@@ -415,35 +415,35 @@
       "stops": [
         {
           "name": "Megenagna",
-          "id": 116,
+          "id": 194,
           "lat": 9.0267,
           "lon": 38.7613,
           "is_terminal": true
         },
         {
           "name": "Urael",
-          "id": 140,
+          "id": 218,
           "lat": 9.019,
           "lon": 38.7567,
           "is_terminal": false
         },
         {
           "name": "Kality",
-          "id": 141,
+          "id": 219,
           "lat": 9.0112,
           "lon": 38.7523,
           "is_terminal": false
         },
         {
           "name": "Gofa",
-          "id": 142,
+          "id": 220,
           "lat": 9.0035,
           "lon": 38.7345,
           "is_terminal": false
         },
         {
           "name": "Saris",
-          "id": 132,
+          "id": 210,
           "lat": 8.992,
           "lon": 38.72,
           "is_terminal": true
