@@ -6,7 +6,11 @@ import logging
 import time
 from typing import Any
 
-from app.services.websocket import manager
+from app.services.websocket import (
+    CHANNEL_CV_RESULT,
+    CHANNEL_VEHICLE_POSITION,
+    manager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +63,7 @@ async def broadcast_vehicle_position(
                 }
                 for stop_id, data in eta_payloads.items()
             }
-        await manager.broadcast(payload)
+        await manager.publish(CHANNEL_VEHICLE_POSITION, payload)
     except Exception:
         logger.warning(
             "broadcast_vehicle_position failed for %s",
@@ -106,7 +110,7 @@ async def broadcast_cv_result(
         }
         if image_path is not None:
             payload["image_path"] = image_path
-        await manager.broadcast(payload)
+        await manager.publish(CHANNEL_CV_RESULT, payload)
     except Exception:
         logger.warning(
             "broadcast_cv_result failed for %s",

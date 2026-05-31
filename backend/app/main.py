@@ -1,5 +1,7 @@
 """FastAPI application entry point."""
 
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -28,6 +30,7 @@ from app.middleware.firewall import FirewallMiddleware
 from app.middleware.request_validator import RequestValidationMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.redis_cache import close_redis_cache
+from app.services.websocket import manager as ws_manager
 from app.utils.redis_client import close_redis
 
 settings = get_settings()
@@ -36,7 +39,12 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown."""
+    # Start Redis Pub/Sub subscriber for cross-worker WebSocket broadcast
+    await ws_manager.start()
+    logger = logging.getLogger("uvicorn")
+    logger.info("WebSocket Redis subscriber starting (pid=%d)", os.getpid() if hasattr(os, "getpid") else 0)
     yield
+    await ws_manager.stop()
     await close_redis()
     await close_redis_cache()
 
