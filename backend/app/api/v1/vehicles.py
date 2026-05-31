@@ -21,6 +21,7 @@ from app.schemas.vehicle import (
     VehicleResponse,
 )
 from app.services.telemetry_ingest import process_telemetry
+from app.utils.occupancy import resolve_occupancy_level
 
 router = APIRouter(tags=["vehicles"])
 
@@ -144,12 +145,18 @@ async def receive_telemetry(
             is_active=True,
         )
 
+    occupancy_level = resolve_occupancy_level(
+        pixel_count=data.pixel_count,
+        raw_payload=data.raw_payload,
+    )
+
     result = await process_telemetry(
         db=db,
         device_id=data.device_id,
         lat=data.lat,
         lon=data.lon,
         speed=data.speed or 0.0,
+        occupancy_level=occupancy_level,
         compute_eta=False,
         persist_raw=True,
     )
