@@ -176,6 +176,12 @@ async def point_to_point_search(
                     end_payload.get("computed_at", 0),
                 )
 
+            # Position freshness indicator
+            bus_ts = bus.get("timestamp")
+            pt_position_age = max(
+                0, int(time.time() - float(bus_ts))
+            ) if bus_ts is not None else None
+
             route_buses.append(
                 {
                     "vehicle_id": bus.get("vehicle_id"),
@@ -190,8 +196,13 @@ async def point_to_point_search(
                     "eta_live_to_start_stop": eta_live_to_start,
                     "eta_to_end_stop": eta_to_end,
                     "eta_live_to_end_stop": eta_live_to_end,
+                    "position_age_seconds": pt_position_age,
                 }
             )
+
+        # Skip routes with no live buses
+        if not route_buses:
+            continue
 
         entry: dict = {
             "route_number": route.route_number,
@@ -286,6 +297,7 @@ async def journey_search(
                     continue
 
             occupancy_level = 0
+            cv_data = None
             if redis is not None and plate_number:
                 try:
                     live = await redis.hgetall(bus_live_key(plate_number))
@@ -293,6 +305,19 @@ async def journey_search(
                         occupancy_level = int(live.get("occupancy_level", 0))
                 except Exception:
                     occupancy_level = 0
+                # Fetch detailed CV crowd data for the mobile app
+                try:
+                    from app.services.redis_cache import get_cv_result
+                    cv = await get_cv_result(plate_number)
+                    if cv:
+                        cv_data = {
+                            "people_count": cv.get("people_count", 0),
+                            "crowd_density": cv.get("crowd_density", 0),
+                            "method": cv.get("method", "unknown"),
+                            "confidence": cv.get("confidence", 0),
+                        }
+                except Exception:
+                    cv_data = None
 
             eta_stops = (
                 route_stops if forward_direction else list(reversed(route_stops))
@@ -333,6 +358,12 @@ async def journey_search(
                     start_eta_data.get("computed_at", 0),
                 )
 
+            # Position freshness indicator for the mobile app
+            bus_ts = bus.get("timestamp")
+            position_age_seconds = max(
+                0, int(now_ts - float(bus_ts))
+            ) if bus_ts is not None else None
+
             route_buses.append(
                 {
                     "vehicle_id": bus.get("vehicle_id"),
@@ -343,6 +374,7 @@ async def journey_search(
                     "route_id": route.id,
                     "assignment_id": bus.get("assignment_id"),
                     "occupancy_level": int(occupancy_level),
+                    "cv_data": cv_data,
                     "eta_seconds": int(eta_seconds),
                     "eta_live_seconds": live_eta,
                     "eta_mode": eta_data.get("eta_mode"),
@@ -351,11 +383,16 @@ async def journey_search(
                     "distance_m": eta_data.get("distance_m"),
                     "eta_to_start_stop": start_eta_seconds,
                     "eta_live_to_start_stop": start_eta_live,
+                    "position_age_seconds": position_age_seconds,
                 }
             )
 
         if body.max_buses:
             route_buses = route_buses[: max(1, int(body.max_buses))]
+
+        # Skip routes with no live buses — mobile only wants actionable results
+        if not route_buses:
+            continue
 
         response_routes.append(
             {
