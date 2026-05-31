@@ -104,18 +104,6 @@ async def point_to_point_search(
             if lat is None or lon is None:
                 continue
 
-            # Stale position check
-            pos_ts = bus.get("timestamp")
-            if pos_ts is not None:
-                try:
-                    age = time.time() - float(pos_ts)
-                except (TypeError, ValueError):
-                    continue
-                settings_local = get_settings()
-                max_age = int(settings_local.LIVE_POSITION_MAX_AGE_SECONDS or 0)
-                if max_age > 0 and age > max_age:
-                    continue
-
             # Direction and position filtering
             bus_idx = nearest_stop_index(float(lat), float(lon), route_stops) if route_stops else 0
 
@@ -128,14 +116,13 @@ async def point_to_point_search(
                 except Exception:
                     direction = None
 
-            if direction is None:
-                continue
-            if forward_direction:
-                if direction < 0 or bus_idx > start_idx:
-                    continue
-            else:
-                if direction > 0 or bus_idx < start_idx:
-                    continue
+            if direction is not None:
+                if forward_direction:
+                    if direction < 0 or bus_idx > start_idx:
+                        continue
+                else:
+                    if direction > 0 or bus_idx < start_idx:
+                        continue
 
             # Compute ETA from bus to the start stop
             eta_to_start = 0
@@ -287,14 +274,13 @@ async def journey_search(
                 except Exception:
                     direction = None
 
-            if direction is None:
-                continue
-            if forward_direction:
-                if direction < 0 or bus_idx > start_idx:
-                    continue
-            else:
-                if direction > 0 or bus_idx < start_idx:
-                    continue
+            if direction is not None:
+                if forward_direction:
+                    if direction < 0 or bus_idx > start_idx:
+                        continue
+                else:
+                    if direction > 0 or bus_idx < start_idx:
+                        continue
 
             occupancy_level = 0
             cv_data = None
