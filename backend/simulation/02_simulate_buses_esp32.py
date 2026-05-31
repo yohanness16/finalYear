@@ -197,7 +197,6 @@ class ESP32BusSimulator:
                 "lon": str(lon),
                 "speed": str(round(speed_kmh, 2)),
                 "bus_capacity": str(capacity),
-                "occupancy_level": str(occupancy_level),
             }
 
             # Prepare file data
