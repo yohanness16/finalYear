@@ -89,6 +89,16 @@ class ConnectionManager:
             "WebSocket registered locally (total: %d)", len(self._local_connections)
         )
 
+    def register_mobile(self, websocket: WebSocket, route_id: int | None = None) -> None:
+        """Register a mobile WebSocket with an optional route subscription filter."""
+        websocket.scope["subscribed_route_id"] = route_id
+        self._local_connections.add(websocket)
+        logger.debug(
+            "Mobile WebSocket registered locally route=%s (total: %d)",
+            route_id,
+            len(self._local_connections),
+        )
+
     def disconnect(self, websocket: WebSocket) -> None:
         self._local_connections.discard(websocket)
 
@@ -156,13 +166,21 @@ class ConnectionManager:
         Send message to local WebSocket connections.
 
         For CHANNEL_VEHICLE_POSITION:
-          - Admin WebSockets (no filter): receive ALL positions
-          - Mobile WebSockets: filtered by route_id (see websocket_mobile.py)
+          - Admin WebSockets (no subscribed_route_id): receive ALL positions
+          - Mobile WebSockets (with subscribed_route_id): receive ONLY if
+            the position's route_id matches their subscription
         """
         dead: list[WebSocket] = []
 
         for ws in self._local_connections:
             try:
+                # Mobile filtering: only send positions for subscribed route
+                sub_route = ws.scope.get("subscribed_route_id")
+                if sub_route is not None and channel == CHANNEL_VEHICLE_POSITION:
+                    pos_route = data.get("route_id")
+                    if pos_route is not None and pos_route != sub_route:
+                        continue  # skip — not the route this mobile client wants
+
                 await ws.send_json(data)
             except Exception:
                 dead.append(ws)

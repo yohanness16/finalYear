@@ -24,6 +24,7 @@ from app.api.v1 import (
     users,
     vehicles,
     websocket,
+    websocket_mobile,
 )
 from app.core.config import get_settings
 from app.middleware.firewall import FirewallMiddleware
@@ -124,6 +125,7 @@ app.include_router(routes.router, prefix="/api/v1", tags=["routes"])
 app.include_router(assignments.router, prefix="/api/v1", tags=["assignments"])
 app.include_router(admin.router, prefix="/api/v1", tags=["admin"])
 app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
+app.include_router(websocket_mobile.router, prefix="/api/v1", tags=["websocket"])
 app.include_router(search.router, prefix="/api/v1", tags=["search"])
 app.include_router(favorites.router, prefix="/api/v1", tags=["favorites"])
 app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
