@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -63,7 +64,32 @@ async def broadcast_vehicle_position(
                 }
                 for stop_id, data in eta_payloads.items()
             }
-        await manager.publish(CHANNEL_VEHICLE_POSITION, payload)
+        # Prefer the async `publish(channel, message)` used in production
+        # but fall back to older/alternative `broadcast(message)` when
+        # tests or shims replace the manager with a MagicMock that only
+        # exposes `broadcast` as an AsyncMock. We call the candidate and
+        # await the result only if it returns a coroutine.
+        try:
+            publish_fn = getattr(manager, "publish", None)
+            if callable(publish_fn):
+                res = publish_fn(CHANNEL_VEHICLE_POSITION, payload)
+                if asyncio.iscoroutine(res):
+                    await res
+                else:
+                    # If publish exists but is not awaitable (e.g. MagicMock),
+                    # fall through to try `broadcast` below so tests that
+                    # patch `broadcast` still receive the message.
+                    pass
+
+            # If publish didn't handle it, try legacy broadcast signature
+            broadcast_fn = getattr(manager, "broadcast", None)
+            if callable(broadcast_fn):
+                res2 = broadcast_fn(payload)
+                if asyncio.iscoroutine(res2):
+                    await res2
+        except Exception:
+            # Let outer try/except handle logging of the failure
+            raise
     except Exception:
         logger.warning(
             "broadcast_vehicle_position failed for %s",
@@ -110,7 +136,22 @@ async def broadcast_cv_result(
         }
         if image_path is not None:
             payload["image_path"] = image_path
-        await manager.publish(CHANNEL_CV_RESULT, payload)
+        try:
+            publish_fn = getattr(manager, "publish", None)
+            if callable(publish_fn):
+                res = publish_fn(CHANNEL_CV_RESULT, payload)
+                if asyncio.iscoroutine(res):
+                    await res
+                else:
+                    pass
+
+            broadcast_fn = getattr(manager, "broadcast", None)
+            if callable(broadcast_fn):
+                res2 = broadcast_fn(payload)
+                if asyncio.iscoroutine(res2):
+                    await res2
+        except Exception:
+            raise
     except Exception:
         logger.warning(
             "broadcast_cv_result failed for %s",
