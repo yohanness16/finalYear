@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
 from app.db.session import get_db
-from app.services.image_pipeline import process_esp32_telemetry
+from app.services.telemetry_ingest import process_telemetry
 
 router = APIRouter(tags=["gateway"])
 
@@ -27,31 +27,33 @@ async def receive_esp32_telemetry(
 ):
     """Receive multipart telemetry from an ESP32-CAM gateway.
 
-    The full pipeline handles:
+    Delegates to the unified process_telemetry() service which handles:
       - Vehicle identity resolution (auto-provision if new device_id)
       - GPS validation (outlier + on-route checks)
       - Image storage to disk
-      - CV-based crowd density estimation
+      - CV-based crowd density estimation (YOLOv8)
       - Raw telemetry persistence
-      - Redis live pipeline update
+      - Redis live pipeline update + CV result storage
       - Route ETA computation
       - Trip history recording
       - WebSocket broadcast (position + CV results)
     """
     image_bytes = await image.read()
 
-    result = await process_esp32_telemetry(
+    result = await process_telemetry(
         db=db,
         device_id=device_id,
         lat=lat,
         lon=lon,
         speed=speed,
-        bus_capacity=bus_capacity,
-        occupancy_level=occupancy_level,
         image_bytes=image_bytes,
         image_name=image.filename,
         plate_number=plate_number,
         bus_type=bus_type,
+        bus_capacity=bus_capacity,
+        occupancy_level=occupancy_level,
+        compute_eta=True,
+        persist_raw=True,
     )
 
     return result

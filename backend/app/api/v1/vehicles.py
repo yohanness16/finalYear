@@ -2,11 +2,11 @@
 
 import re
 import time
-from datetime import UTC
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.limiter import limiter
 from app.core.security import RequireAdmin
 from app.crud import route as crud_route
 from app.crud import vehicle as crud_vehicle
@@ -20,7 +20,7 @@ from app.schemas.vehicle import (
     VehiclePosition,
     VehicleResponse,
 )
-from app.utils.occupancy import resolve_occupancy_level
+from app.services.telemetry_ingest import process_telemetry
 
 router = APIRouter(tags=["vehicles"])
 
@@ -122,11 +122,16 @@ async def admin_update_vehicle(
 
 
 @router.post("/vehicles/telemetry")
+@limiter.limit("300/minute")
 async def receive_telemetry(
     data: TelemetryInput,
     db: AsyncSession = Depends(get_db),
 ):
-    """Receive GPS telemetry and update vehicle position."""
+    """Receive GPS telemetry and update vehicle position.
+
+    Auto-provisions the vehicle if device_id is not yet registered.
+    Delegates to the unified process_telemetry() service.
+    """
     vehicle = await crud_vehicle.get_vehicle_by_device_id(db, data.device_id)
     if not vehicle:
         vehicle = await crud_vehicle.create_vehicle(
@@ -138,54 +143,14 @@ async def receive_telemetry(
             is_active=True,
         )
 
-    occupancy_level = resolve_occupancy_level(data.pixel_count, data.raw_payload)
-
-    await crud_vehicle.update_position(
-        db, vehicle.id, data.lat, data.lon, data.speed or 0
+    result = await process_telemetry(
+        db=db,
+        device_id=data.device_id,
+        lat=data.lat,
+        lon=data.lon,
+        speed=data.speed or 0.0,
+        compute_eta=False,
+        persist_raw=True,
     )
 
-    from datetime import datetime
-
-    from app.services.live_broadcast import broadcast_vehicle_position
-
-    ts = datetime.now(UTC).timestamp()
-    await broadcast_vehicle_position(
-        vehicle.id,
-        vehicle.plate_number,
-        data.lat,
-        data.lon,
-        data.speed or 0.0,
-        vehicle.route_id,
-        ts,
-    )
-
-    await _save_raw_telemetry(
-        db,
-        vehicle.id,
-        data.lat,
-        data.lon,
-        data.pixel_count,
-        data.raw_payload,
-    )
-
-    return {
-        "status": "received",
-        "vehicle_id": vehicle.id,
-        "occupancy_level": occupancy_level,
-        "route_checked": bool(vehicle.route_id),
-    }
-
-
-async def _save_raw_telemetry(
-    db: AsyncSession,
-    vehicle_id: int,
-    lat: float,
-    lon: float,
-    pixel_count: int | None,
-    raw_payload: dict | None,
-):
-    from app.crud import tracking as crud_tracking
-
-    await crud_tracking.create_raw_telemetry(
-        db, vehicle_id, lat, lon, pixel_count, raw_payload
-    )
+    return result
