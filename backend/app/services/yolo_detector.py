@@ -554,8 +554,11 @@ class YoloDetector:
         person_count = yolo_result["person_count"]
         method = yolo_result["method"]
 
-        # Fall back to HOG if YOLO models are unavailable
-        if method == "yolov8_unavailable" and self.use_hog_fallback:
+        # Fall back to HOG if YOLO models are unavailable (e.g. import errors
+        # or model load failures). Older callers expect a HOG-style result when
+        # YOLO isn't usable, so trigger the fallback when a model load error
+        # was recorded.
+        if (_model_load_error is not None or method == "yolov8_unavailable") and self.use_hog_fallback:
             from app.services.cv_engine import analyze_bus_density_from_image
 
             hog_result = analyze_bus_density_from_image(image_bytes, bus_capacity)
