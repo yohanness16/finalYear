@@ -27,9 +27,15 @@ async def get_user_by_google_id(db: AsyncSession, google_id: str) -> User | None
 
 
 async def get_all_users(db: AsyncSession):
-    """Fetch all users from the database."""
+    """Fetch all users from the database. Use get_users_paginated instead."""
     result = await db.execute(select(User))
     return result.scalars().all()
+
+
+async def get_users_paginated(db: AsyncSession, skip: int = 0, limit: int = 100):
+    """Fetch users with pagination."""
+    result = await db.execute(select(User).offset(skip).limit(limit))
+    return list(result.scalars().all())
 
 
 async def get_users_by_role(db: AsyncSession, role: str):
