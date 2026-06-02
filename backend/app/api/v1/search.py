@@ -60,6 +60,9 @@ async def point_to_point_search(
     routes = await crud_route.get_routes_through_stops(
         db, body.start_stop_id, body.end_stop_id
     )
+    if body.max_routes:
+        routes = routes[: max(1, int(body.max_routes))]
+
     redis = None
     try:
         redis = await get_redis()
@@ -206,6 +209,9 @@ async def point_to_point_search(
                     "position_age_seconds": pt_position_age,
                 }
             )
+
+        if body.max_buses:
+            route_buses = route_buses[: max(1, int(body.max_buses))]
 
         # Skip routes with no live buses
         if not route_buses:

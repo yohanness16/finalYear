@@ -46,6 +46,8 @@ class PointToPointSearch(BaseModel):
 
     start_stop_id: int
     end_stop_id: int
+    max_routes: int | None = 5
+    max_buses: int | None = 10
 
 
 class GeoJourneySearch(BaseModel):
