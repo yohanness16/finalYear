@@ -44,18 +44,20 @@ async def get_users_by_role(db: AsyncSession, role: str):
     return result.scalars().all()
 
 
-async def search_users(db: AsyncSession, query: str):
+async def search_users(db: AsyncSession, query: str, limit: int = 50):
     """Search users by username or email."""
     pattern = f"%{query}%"
     result = await db.execute(
-        select(User).where(
+        select(User)
+        .where(
             or_(
                 User.username.ilike(pattern),
                 User.email.ilike(pattern),
             )
         )
+        .limit(limit)
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def delete_user(db: AsyncSession, user_id: int):

@@ -94,10 +94,10 @@ async def get_current_user(current_user: RequireAdmin):
 
 @router.get("/search")
 async def search_users(
-    query: str, current_user: RequireAdmin, db: AsyncSession = Depends(get_db)
+    query: str, limit: int = 50, current_user: RequireAdmin, db: AsyncSession = Depends(get_db)
 ):
     """Search users by username or email."""
-    users = await crud_user.search_users(db, query)
+    users = await crud_user.search_users(db, query, limit=min(limit, 200))
     return users
 
 
