@@ -116,12 +116,32 @@ async def point_to_point_search(
                 except Exception:
                     direction = None
 
+            # Filter buses that have already passed the start stop.
+            # When direction is known, use it; otherwise fall back to
+            # position-based filtering (bus closer to/past end stop than
+            # start stop is likely going the wrong way or has passed).
             if direction is not None:
                 if forward_direction:
                     if direction < 0 or bus_idx > start_idx:
                         continue
                 else:
                     if direction > 0 or bus_idx < start_idx:
+                        continue
+            else:
+                # Direction unknown — use position-based fallback:
+                # if the bus is closer to the end stop than the start stop,
+                # it has likely already passed the start stop
+                if route_stops:
+                    bus_lat = float(lat)
+                    bus_lon = float(lon)
+                    dist_to_start = haversine_meters(
+                        bus_lat, bus_lon, route_stops[start_idx].lat, route_stops[start_idx].lon
+                    )
+                    dist_to_end = haversine_meters(
+                        bus_lat, bus_lon, route_stops[end_idx].lat, route_stops[end_idx].lon
+                    )
+                    # If bus is closer to end than start, it's past the boarding point
+                    if dist_to_end < dist_to_start:
                         continue
 
             # Compute ETA from bus to the start stop
@@ -274,12 +294,28 @@ async def journey_search(
                 except Exception:
                     direction = None
 
+            # Filter buses that have already passed the start stop.
+            # When direction is known, use it; otherwise fall back to
+            # position-based filtering.
             if direction is not None:
                 if forward_direction:
                     if direction < 0 or bus_idx > start_idx:
                         continue
                 else:
                     if direction > 0 or bus_idx < start_idx:
+                        continue
+            else:
+                # Direction unknown — use position-based fallback
+                if route_stops:
+                    bus_lat = float(lat)
+                    bus_lon = float(lon)
+                    dist_to_start = haversine_meters(
+                        bus_lat, bus_lon, route_stops[start_idx].lat, route_stops[start_idx].lon
+                    )
+                    dist_to_end = haversine_meters(
+                        bus_lat, bus_lon, route_stops[end_idx].lat, route_stops[end_idx].lon
+                    )
+                    if dist_to_end < dist_to_start:
                         continue
 
             occupancy_level = 0

@@ -57,8 +57,8 @@ class GeoJourneySearch(BaseModel):
     start_lon: float | None = None
     end_lat: float | None = None
     end_lon: float | None = None
-    max_routes: int | None = None
-    max_buses: int | None = None
+    max_routes: int | None = 5
+    max_buses: int | None = 10
 
 
 class FavoriteCreate(BaseModel):
