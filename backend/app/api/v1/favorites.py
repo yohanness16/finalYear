@@ -43,7 +43,13 @@ async def add_favorite(
 
 
 @router.get("/favorites/{user_id}")
-async def list_favorites(user_id: int, db: AsyncSession = Depends(get_db)):
+async def list_favorites(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "Can only view your own favorites")
     result = await db.execute(select(Favorite).where(Favorite.user_id == user_id))
     return list(result.scalars().all())
 
@@ -87,7 +93,11 @@ async def add_rating(
 
 
 @router.get("/ratings/{assignment_id}")
-async def list_ratings(assignment_id: int, db: AsyncSession = Depends(get_db)):
+async def list_ratings(
+    assignment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(
         select(Rating).where(Rating.assignment_id == assignment_id)
     )
