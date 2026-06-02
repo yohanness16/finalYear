@@ -4,6 +4,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.config import get_settings
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
@@ -22,8 +24,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
       - Cache-Control for API responses — prevent caching sensitive data
     """
 
-    # HSTS max-age: 1 year (31536000 seconds), include subdomains, preload
-    HSTS_MAX_AGE = 31536000
+    def __init__(self, app):
+        super().__init__(app)
+        self._hsts_max_age = get_settings().HSTS_MAX_AGE
 
     # Content-Security-Policy for API (restrictive — APIs serve JSON, not HTML)
     CSP_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
@@ -39,7 +42,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Transport security — force HTTPS
         response.headers["Strict-Transport-Security"] = (
-            f"max-age={self.HSTS_MAX_AGE}; includeSubDomains; preload"
+            f"max-age={self._hsts_max_age}; includeSubDomains; preload"
         )
 
         # Content Security Policy
