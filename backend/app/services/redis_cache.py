@@ -191,14 +191,10 @@ async def get_cv_result(
     return result
 
 
-def set_last_position(plate: str, lat: float, lon: float, ttl: int = 300) -> None:
-    import asyncio
-
-    async def _set() -> None:
-        client = await get_redis()
-        await client.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
-
-    asyncio.create_task(_set())
+async def set_last_position(plate: str, lat: float, lon: float, ttl: int = 300) -> None:
+    """Set the last known position for a vehicle in Redis."""
+    client = await get_redis()
+    await client.set(f"veh:pos:{plate}", json.dumps([lat, lon]), ex=ttl)
 
 
 async def push_live_position(plate: str, payload: dict) -> None:
