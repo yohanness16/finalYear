@@ -14,7 +14,12 @@ from app.utils.gps_validation import haversine_meters
 
 
 def _nearest_stop_index(lat: float, lon: float, route_stops: list[Stop]) -> int:
-    """Approximate current progress by the nearest stop index."""
+    """Approximate current progress by the nearest stop index.
+
+    When two stops are equidistant, the earlier stop (lower index) is
+    preferred so that the bus is considered "at" that stop rather than
+    having passed it. This ensures the current stop still gets an ETA.
+    """
     if not route_stops:
         return 0
     nearest_idx = 0
@@ -92,18 +97,14 @@ def estimate_route_stop_eta_payloads(
             segment_adjustments.append(float(adjustment or 0.0))
 
     for idx, stop in enumerate(route_stops):
-        # Skip stops that are behind the bus (before the nearest stop).
-        # These stops have already been passed and should not get ETAs.
-        if idx < nearest_idx:
-            continue
-
         distance_m = haversine_meters(lat, lon, stop.lat, stop.lon)
         travel_seconds = distance_m / speed_ms
 
         # Sum dwell for all stops from the nearest stop through this stop
         # (inclusive). The nearest stop needs dwell time for boarding/alighting
         # as does every intermediate stop the bus must stop at before reaching
-        # the target stop.
+        # the target stop. Only include dwell for stops at or after the
+        # nearest stop (the bus hasn't passed those yet).
         dwell_seconds = 0.0
         for s in route_stops[nearest_idx : idx + 1]:
             dwell_seconds += (s.base_dwell_time or 30) * (s.peak_multiplier or 1.0)

@@ -78,11 +78,11 @@ async def get_nearest_stops(
 async def get_routes_through_stops(
     db: AsyncSession, start_stop_id: int, end_stop_id: int
 ) -> list[Route]:
-    """Find routes containing both stops with correct travel direction.
+    """Find all route-direction combinations containing both stops.
 
-    Only returns route-direction combinations where the start stop comes
-    before the end stop in the route's sequence (i.e. the bus actually
-    travels from start→end, not end→start).
+    Returns every route-direction row that includes both start and end stops,
+    regardless of their sequence order. Direction filtering (which buses are
+    heading toward the start stop) is handled at the search layer, not here.
     """
     result = await db.execute(
         select(Route)
@@ -92,17 +92,13 @@ async def get_routes_through_stops(
         .distinct()
     )
     routes = list(result.scalars().unique().all())
-    # Filter: route must contain both stops with correct direction
+    # Filter: route must contain both stops (in any order)
     valid = []
     for r in routes:
-        stops_order = {rs.stop_id: rs.sequence_order for rs in r.route_stops}
-        if start_stop_id not in stops_order or end_stop_id not in stops_order:
-            continue
-        if start_stop_id == end_stop_id:
-            continue
-        # Only include this route if start comes before end in sequence
-        if stops_order[start_stop_id] < stops_order[end_stop_id]:
-            valid.append(r)
+        stop_ids = {rs.stop_id for rs in r.route_stops}
+        if start_stop_id in stop_ids and end_stop_id in stop_ids:
+            if start_stop_id != end_stop_id:
+                valid.append(r)
     return valid
 
 
