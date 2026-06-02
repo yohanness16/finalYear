@@ -1,23 +1,11 @@
 """GPS outlier detection using last 5 points buffer."""
 
-import math
-
 # Max plausible distance (meters) between consecutive pings for a moving bus
 # ~100 km/h = ~28 m/s, so 5 sec interval = ~140m. Use 500m as safety margin.
 MAX_PLAUSIBLE_DELTA_M = 500.0
 
-
-def haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculate distance in meters between two GPS points."""
-    R = 6371000  # Earth radius in meters
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dphi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    )
-    return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+# Re-export haversine_meters from the single source of truth (eta_calc)
+from app.services.eta_calc import haversine_meters  # noqa: F401
 
 
 def is_valid_coord(
