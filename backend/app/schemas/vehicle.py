@@ -60,10 +60,6 @@ class LivePositionsEnvelope(BaseModel):
     timestamp: float
 
 
-class TelemetryInput(BaseModel):
-    device_id: str
-    lat: float
-    lon: float
-    speed: float | None = None
-    pixel_count: int | None = None
-    raw_payload: dict | None = None
+# Re-export the single source-of-truth TelemetryInput from schemas.tracking
+# to avoid divergence when one copy is modified but not the other.
+from app.schemas.tracking import TelemetryInput  # noqa: F401
