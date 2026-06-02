@@ -67,7 +67,7 @@ async def delete_favorite(
     if fav.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(403, "Not your favorite")
     await db.delete(fav)
-    await db.flush()
+    # db.commit() is handled by the get_db dependency on successful exit
     return {"status": "deleted", "id": favorite_id}
 
 
