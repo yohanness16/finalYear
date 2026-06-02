@@ -117,10 +117,19 @@ async def health_check():
 
 # 4. CORS — outermost layer, handles preflight
 cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+# When credentials are enabled, browsers reject wildcard origins.
+# If the configured value is the default wildcard, disable credentials
+# to prevent CORS failures; otherwise use the explicit origin list.
+if cors_origins == ["*"]:
+    _cors_allow_credentials = False
+    _cors_allow_origins = ["*"]
+else:
+    _cors_allow_credentials = True
+    _cors_allow_origins = cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins + ["http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=_cors_allow_origins,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
