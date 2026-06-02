@@ -41,6 +41,7 @@ async def create_stop(
 async def list_stops(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
+    limit = min(limit, 500)
     return await crud_route.get_stops(db, skip, limit)
 
 
@@ -81,6 +82,7 @@ async def create_route(
 async def list_routes(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
+    limit = min(limit, 500)
     return await crud_route.get_routes(db, skip, limit)
 
 

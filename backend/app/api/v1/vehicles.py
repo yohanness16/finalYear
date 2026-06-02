@@ -91,6 +91,7 @@ async def get_vehicle_position(vehicle_id: int, db: AsyncSession = Depends(get_d
 async def list_vehicles(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
+    limit = min(limit, 500)
     vehicles = await crud_vehicle.get_vehicles(db, skip, limit)
     return [_vehicle_to_response(v) for v in vehicles]
 
