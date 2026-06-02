@@ -39,12 +39,12 @@ class AdminCreateUserRequest(BaseModel):
 
 
 class AdminUpdateUserRequest(BaseModel):
-    """Admin updates driver or admin accounts."""
+    """Admin updates driver or admin accounts. All fields are optional for partial updates."""
 
-    username: str = Field(..., min_length=3, max_length=100)
-    email: EmailStr
+    username: str | None = Field(default=None, min_length=3, max_length=100)
+    email: EmailStr | None = None
     password: str | None = Field(default=None, min_length=8, max_length=100)
-    role: str = Field(..., pattern="^(driver|admin)$")
+    role: str | None = Field(default=None, pattern="^(driver|admin)$")
 
 
 class DriverLoginRequest(BaseModel):

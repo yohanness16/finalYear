@@ -69,8 +69,13 @@ async def update_user(
     if not user:
         raise HTTPException(404, "User not found")
 
-    update_data = {"username": body.username, "email": body.email, "role": body.role}
-    # Only update password if a non-empty password is provided
+    update_data: dict = {}
+    if body.username is not None:
+        update_data["username"] = body.username
+    if body.email is not None:
+        update_data["email"] = body.email
+    if body.role is not None:
+        update_data["role"] = body.role
     if body.password is not None and body.password != "":
         update_data["password_hash"] = pwd_context.hash(body.password)
 
