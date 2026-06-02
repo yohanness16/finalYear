@@ -53,19 +53,22 @@ async def search_users(db: AsyncSession, query: str):
 
 
 async def delete_user(db: AsyncSession, user_id: int):
-    """Permanently remove a user by ID."""
+    """Permanently remove a user by ID. Caller is responsible for commit."""
     await db.execute(delete(User).where(User.id == user_id))
-    await db.commit()
+    await db.flush()
 
 
 async def update_user(db: AsyncSession, user_id: int, **kwargs):
-    """Update user fields dynamically based on provided arguments."""
-    # Filter out None values to avoid overwriting with nulls unintentionally
+    """Update user fields dynamically based on provided arguments.
+
+    Filters out None values to avoid overwriting with nulls.
+    Caller is responsible for commit (via get_db dependency).
+    """
     update_data = {k: v for k, v in kwargs.items() if v is not None}
 
     if update_data:
         await db.execute(update(User).where(User.id == user_id).values(**update_data))
-        await db.commit()
+        await db.flush()
 
     # Return the updated user object
     result = await db.execute(select(User).where(User.id == user_id))
