@@ -119,6 +119,8 @@ async def google_auth(
     google_id = data.get("sub")
     if not email or not google_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
+    if not data.get("email_verified", False):
+        raise HTTPException(status_code=401, detail="Google email not verified")
     user = await crud_user.get_user_by_google_id(db, google_id)
     if user:
         token = create_access_token(user.id)
