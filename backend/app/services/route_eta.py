@@ -92,16 +92,18 @@ def estimate_route_stop_eta_payloads(
             segment_adjustments.append(float(adjustment or 0.0))
 
     for idx, stop in enumerate(route_stops):
+        # Skip stops that are behind the bus (before the nearest stop).
+        # These stops have already been passed and should not get ETAs.
+        if idx < nearest_idx:
+            continue
+
         distance_m = haversine_meters(lat, lon, stop.lat, stop.lon)
         travel_seconds = distance_m / speed_ms
 
-        # Sum dwell for all intermediate stops ahead of current position.
+        # Sum dwell for all intermediate stops between current position and this stop.
         dwell_seconds = 0.0
-        if idx >= nearest_idx:
-            for s in route_stops[nearest_idx + 1 : idx + 1]:
-                dwell_seconds += (s.base_dwell_time or 30) * (s.peak_multiplier or 1.0)
-        else:
-            dwell_seconds = (stop.base_dwell_time or 30) * (stop.peak_multiplier or 1.0)
+        for s in route_stops[nearest_idx + 1 : idx + 1]:
+            dwell_seconds += (s.base_dwell_time or 30) * (s.peak_multiplier or 1.0)
 
         heuristic_eta = int(
             (travel_seconds + dwell_seconds * occupancy_multiplier) + 0.5
