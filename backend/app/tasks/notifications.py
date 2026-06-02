@@ -280,12 +280,18 @@ async def notification_worker():
 
     Runs as a background task in the FastAPI lifespan. Checks every
     CHECK_INTERVAL_SECONDS (default 60s) for buses approaching user-
-    subscribed stops.
+    subscribed stops. Handles cancellation gracefully on shutdown.
     """
     logger.info("Notification worker started (interval: %ds)", CHECK_INTERVAL_SECONDS)
-    while True:
-        try:
-            await check_and_send_notifications()
-        except Exception:
-            logger.exception("Notification worker error")
-        await asyncio.sleep(CHECK_INTERVAL_SECONDS)
+    try:
+        while True:
+            try:
+                await check_and_send_notifications()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Notification worker error")
+            await asyncio.sleep(CHECK_INTERVAL_SECONDS)
+    except asyncio.CancelledError:
+        logger.info("Notification worker shutting down gracefully")
+        raise

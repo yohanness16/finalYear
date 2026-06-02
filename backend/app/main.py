@@ -65,9 +65,11 @@ async def lifespan(app: FastAPI):
     if notif_task:
         notif_task.cancel()
         try:
-            await notif_task
+            await asyncio.wait_for(notif_task, timeout=10.0)
         except asyncio.CancelledError:
             pass
+        except asyncio.TimeoutError:
+            logger.warning("Notification worker did not stop within timeout; forcing cancel")
     await ws_manager.stop()
     await close_redis()
     await close_redis_cache()
