@@ -100,9 +100,12 @@ def estimate_route_stop_eta_payloads(
         distance_m = haversine_meters(lat, lon, stop.lat, stop.lon)
         travel_seconds = distance_m / speed_ms
 
-        # Sum dwell for all intermediate stops between current position and this stop.
+        # Sum dwell for all stops from the nearest stop through this stop
+        # (inclusive). The nearest stop needs dwell time for boarding/alighting
+        # as does every intermediate stop the bus must stop at before reaching
+        # the target stop.
         dwell_seconds = 0.0
-        for s in route_stops[nearest_idx + 1 : idx + 1]:
+        for s in route_stops[nearest_idx : idx + 1]:
             dwell_seconds += (s.base_dwell_time or 30) * (s.peak_multiplier or 1.0)
 
         heuristic_eta = int(
