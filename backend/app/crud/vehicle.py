@@ -130,7 +130,7 @@ async def get_position(db: AsyncSession, vehicle_id: int) -> dict | None:
             Vehicle.position_updated_at,
             Assignment.id.label("assignment_id"),
         )
-        .outerjoin(Assignment, (Assignment.vehicle_id == Vehicle.id) & (Assignment.status == "active"))
+        .join(Assignment, (Assignment.vehicle_id == Vehicle.id) & (Assignment.status == "active"))
         .where(Vehicle.id == vehicle_id)
     )
     row = result.first()
