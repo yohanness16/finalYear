@@ -78,27 +78,37 @@ async def get_live_positions(db: AsyncSession) -> dict[str, dict]:
     rows = result.all()
     out: dict[str, dict] = {}
     now_ts = datetime.now(UTC).timestamp()
+
+    # Batch-fetch occupancy from Redis for all vehicles in one pipeline
+    redis_client = None
+    occupancy_from_redis: dict[str, int] = {}
+    try:
+        redis_client = await get_redis()
+        pipe = redis_client.pipeline()
+        plates = [plate for _, plate, *_ in rows if plate]
+        for plate in plates:
+            pipe.hget(bus_live_key(plate), "occupancy_level")
+        redis_results = await pipe.execute()
+        for plate, raw in zip(plates, redis_results):
+            if raw is not None:
+                occupancy_from_redis[plate] = int(raw)
+    except Exception:
+        pass
+
     for vid, plate, lat, lon, speed, route_id, pos_at, assignment_id in rows:
         if lat is None or lon is None:
             continue
         ts = pos_at.timestamp() if pos_at else now_ts
-        # try bus live hash first, then fallback to CV result hash
-        occupancy: int | None = None
-        try:
-            client = await get_redis()
-            raw = await client.hget(bus_live_key(plate), "occupancy_level")
-            if raw is not None:
-                occupancy = int(raw)
-        except Exception:
-            occupancy = None
 
+        # Try batched Redis occupancy first, then CV result hash
+        occupancy = occupancy_from_redis.get(plate)
         if occupancy is None:
             try:
                 cv = await get_cv_result(plate)
                 if cv is not None and "occupancy_level" in cv:
                     occupancy = int(cv.get("occupancy_level", 0))
             except Exception:
-                occupancy = None
+                pass
 
         if occupancy is None:
             occupancy = 0
