@@ -15,6 +15,7 @@ from app.api.v1 import (
     assignments,
     auth,
     crowd,
+    driver_assignments,
     favorites,
     gateway,
     notifications,
@@ -22,6 +23,7 @@ from app.api.v1 import (
     routes,
     search,
     tracking,
+    trip_history,
     users,
     vehicles,
     websocket,
@@ -54,6 +56,7 @@ async def lifespan(app: FastAPI):
     notif_task: asyncio.Task | None = None
     if settings.FCM_SERVER_KEY and settings.FCM_SERVER_KEY != "xxx":
         from app.tasks.notifications import notification_worker
+
         notif_task = asyncio.create_task(notification_worker())
         logger.info("Push notification worker started")
     else:
@@ -69,7 +72,9 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         except asyncio.TimeoutError:
-            logger.warning("Notification worker did not stop within timeout; forcing cancel")
+            logger.warning(
+                "Notification worker did not stop within timeout; forcing cancel"
+            )
     await ws_manager.stop()
     await close_redis()
     await close_redis_cache()
@@ -164,3 +169,7 @@ app.include_router(search.router, prefix="/api/v1", tags=["search"])
 app.include_router(favorites.router, prefix="/api/v1", tags=["favorites"])
 app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
 app.include_router(pairing.router, prefix="/api/v1", tags=["pairing"])
+app.include_router(
+    driver_assignments.router, prefix="/api/v1", tags=["driver-assignments"]
+)
+app.include_router(trip_history.router, prefix="/api/v1", tags=["trip-history"])
