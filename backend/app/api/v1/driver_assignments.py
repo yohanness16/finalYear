@@ -17,12 +17,13 @@ from app.crud import driver_bus_session as crud_driver_session
 from app.crud import route as crud_route
 from app.db.session import get_db
 from app.models.assignment import Assignment
+from app.models.vehicle import Vehicle
 
 router = APIRouter(tags=["driver-assignments"])
 
 
 class DriverAssignmentStartBody(BaseModel):
-    route_id: int
+    route_number: str
 
 
 class DriverAssignmentEndBody(BaseModel):
@@ -85,15 +86,17 @@ async def start_driver_assignment(
     current_user: RequireDriver,
     db: AsyncSession = Depends(get_db),
 ):
-    """Driver starts their own ride. Vehicle comes from active session."""
+    """Driver starts their own ride by specifying a route number.
+    The vehicle's route is also updated to match."""
     session = await crud_driver_session.get_active_session_for_driver(
         db, current_user.id
     )
     if not session:
         raise HTTPException(404, "No active driver session")
 
-    if not await crud_route.get_route_by_id(db, body.route_id):
-        raise HTTPException(404, "Route not found")
+    route = await crud_route.get_route_by_number(db, body.route_number)
+    if not route:
+        raise HTTPException(404, f"Route '{body.route_number}' not found")
 
     existing = await crud_assignment.get_active_assignment_by_vehicle(
         db, session.vehicle_id
@@ -101,8 +104,14 @@ async def start_driver_assignment(
     if existing:
         raise HTTPException(409, "Vehicle already has an active assignment")
 
+    # Update the vehicle's assigned route
+    vehicle = await db.get(Vehicle, session.vehicle_id)
+    if vehicle:
+        vehicle.route_id = route.id
+        await db.flush()
+
     a = await crud_assignment.create_assignment(
-        db, current_user.id, session.vehicle_id, body.route_id
+        db, current_user.id, session.vehicle_id, route.id
     )
     res = await db.execute(
         select(Assignment)
