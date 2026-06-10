@@ -53,7 +53,7 @@ async def get_trip_history_by_vehicle(
     vehicle_id: int,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    current_user: CurrentUser = Depends(),
+    current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
     """Read trip history for all assignments of a given vehicle."""
@@ -86,7 +86,7 @@ async def get_trip_history_by_vehicle(
 )
 async def get_trip_history_by_assignment(
     assignment_id: int,
-    current_user: CurrentUser = Depends(),
+    current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
     """Read trip history for a specific assignment."""
