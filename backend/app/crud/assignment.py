@@ -27,7 +27,11 @@ async def get_active_assignment_by_vehicle(
     result = await db.execute(
         select(Assignment)
         .where(Assignment.vehicle_id == vehicle_id, Assignment.status == "active")
-        .options(selectinload(Assignment.route), selectinload(Assignment.vehicle))
+        .options(
+            selectinload(Assignment.route),
+            selectinload(Assignment.vehicle),
+            selectinload(Assignment.driver),
+        )
         .order_by(Assignment.start_time.desc())
         .limit(1)
     )
