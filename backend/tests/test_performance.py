@@ -3,18 +3,27 @@ Performance Benchmark Suite for BusTrack
 =========================================
 
 Measures real system performance metrics and writes results to a CSV file.
-Run against a LIVE deployed backend (not the test client) so measurements
-reflect real network latency, database queries, and Redis operations.
+Run against a LIVE deployed backend so measurements reflect real network
+latency, database queries, and Redis operations.
 
-Usage:
+These tests require:
+  - A running backend at API_BASE (default http://localhost:8000)
+  - A running PostgreSQL database
+  - A running Redis instance
+  - Valid admin credentials
+
+They are marked with @pytest.mark.integration so they are SKIPPED by default
+in CI and unit-test runs. To run them explicitly:
+
   # Run against local backend
-  python -m pytest tests/test_performance.py -v -s
+  python -m pytest tests/test_performance.py -v -s -m integration
 
   # Run against deployed backend
-  API_BASE=https://bustrack.dpdns.org python -m pytest tests/test_performance.py -v -s
+  API_BASE=https://bustrack.dpdns.org ADMIN_USER=admin ADMIN_PASS=pass \
+    python -m pytest tests/test_performance.py -v -s -m integration
 
-  # Run specific benchmark
-  python -m pytest tests/test_performance.py::test_api_latency_search -v -s
+  # Skip integration tests (default in CI)
+  python -m pytest tests/ -m "not integration"
 
 Output:
   storage/benchmark_results.csv  — all measurements in one file
@@ -50,6 +59,10 @@ JSON_PATH = RESULTS_DIR / "benchmark_results.json"
 # Number of iterations for each benchmark
 ITERATIONS = int(os.environ.get("BENCHMARK_ITERATIONS", "30"))
 WARMUP_ITERATIONS = 5  # discarded — not counted in results
+
+# Skip all tests in this module unless RUN_INTEGRATION is set or
+# tests are explicitly selected with -m integration.
+pytestmark = pytest.mark.integration
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -177,7 +190,6 @@ class BenchmarkResult:
     def write_json(self):
         if not self.rows:
             return
-        # Append to existing JSON if present
         existing: list[dict] = []
         if JSON_PATH.exists():
             try:
@@ -208,23 +220,17 @@ async def _measure_request(
     *,
     json_body: dict | None = None,
     headers: dict | None = None,
-    data: dict | None = None,
-    files: dict | None = None,
 ) -> tuple[float, httpx.Response]:
     """Send a request and return (elapsed_seconds, response)."""
     t0 = time.monotonic()
     if method == "POST":
-        if files:
-            resp = await client.post(
-                f"{API_BASE}{path}", data=data, files=files, headers=headers, timeout=30
-            )
-        elif json_body is not None:
+        if json_body is not None:
             resp = await client.post(
                 f"{API_BASE}{path}", json=json_body, headers=headers, timeout=30
             )
         else:
             resp = await client.post(
-                f"{API_BASE}{path}", data=data, headers=headers, timeout=30
+                f"{API_BASE}{path}", headers=headers, timeout=30
             )
     else:
         resp = await client.get(f"{API_BASE}{path}", headers=headers, timeout=30)
@@ -242,15 +248,11 @@ async def _run_benchmark(
     json_body: dict | None = None,
     headers: dict | None = None,
     expected_status: int = 200,
-    warmup: int = WARMUP_ITERATIONS,
-    iterations: int = ITERATIONS,
-    unit: str = "seconds",
 ) -> list[float]:
     """Run a request multiple times, discard warmup, collect measurements."""
     measurements: list[float] = []
 
-    # Warmup phase — not recorded
-    for _ in range(warmup):
+    for _ in range(WARMUP_ITERATIONS):
         try:
             _, resp = await _measure_request(
                 client, method, path, json_body=json_body, headers=headers
@@ -258,9 +260,8 @@ async def _run_benchmark(
         except Exception:
             pass
 
-    # Measured phase
     errors = 0
-    for i in range(iterations):
+    for _ in range(ITERATIONS):
         try:
             elapsed, resp = await _measure_request(
                 client, method, path, json_body=json_body, headers=headers
@@ -272,13 +273,13 @@ async def _run_benchmark(
         except Exception:
             errors += 1
 
-    details = f"errors={errors}/{iterations}"
-    bench.add_stats(category, metric_name, unit, measurements, details)
+    details = f"errors={errors}/{ITERATIONS}"
+    bench.add_stats(category, metric_name, "seconds", measurements, details)
     return measurements
 
 
 # ===========================================================================
-# 1. API LATENCY BENCHMARKS
+# Fixtures requiring live server
 # ===========================================================================
 
 @pytest.fixture(scope="session")
@@ -294,7 +295,7 @@ async def admin_token(client: httpx.AsyncClient) -> str:
         "username": ADMIN_USER, "password": ADMIN_PASS
     })
     if resp.status_code != 200:
-        pytest.skip(f"Admin login failed: {resp.status_code} {resp.text[:200]}")
+        pytest.skip(f"Admin login failed: {resp.status_code}")
     return resp.json()["access_token"]
 
 
@@ -304,7 +305,6 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
     headers = {"Authorization": f"Bearer {admin_token}"}
     data: dict[str, Any] = {}
 
-    # Create stops
     stop_names = [
         ("Bench A", 9.020, 38.730),
         ("Bench B", 9.030, 38.740),
@@ -320,7 +320,6 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
         if resp.status_code == 200:
             stop_ids.append(resp.json()["id"])
         else:
-            # Try to find existing
             r = await client.get(f"{API_BASE}/api/v1/routes/stops?limit=200", headers=headers)
             if r.status_code == 200:
                 for s in r.json():
@@ -329,7 +328,6 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
                         break
     data["stop_ids"] = stop_ids
 
-    # Create route
     route_stops = [{"stop_id": sid, "sequence_order": i + 1} for i, sid in enumerate(stop_ids)]
     resp = await client.post(f"{API_BASE}/api/v1/routes", headers=headers, json={
         "route_number": f"BENCH-{uuid.uuid4().hex[:6]}",
@@ -345,7 +343,6 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
         if r.status_code == 200 and r.json():
             data["route_id"] = r.json()[0]["id"]
 
-    # Create vehicle
     plate = f"BENCH-{uuid.uuid4().hex[:6]}"
     resp = await client.post(f"{API_BASE}/api/v1/vehicles", headers=headers, json={
         "plate_number": plate,
@@ -357,14 +354,12 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
     if resp.status_code == 200:
         data["vehicle_id"] = resp.json()["id"]
         data["device_id"] = f"BENCH-DEV-{uuid.uuid4().hex[:8]}"
-        # Assign route
         await client.put(
             f"{API_BASE}/api/v1/vehicles/{data['vehicle_id']}",
             headers=headers,
             json={"route_id": data["route_id"]},
         )
 
-    # Create driver
     resp = await client.post(f"{API_BASE}/api/v1/admin/users/create", headers=headers, json={
         "username": f"bench_{uuid.uuid4().hex[:8]}",
         "email": f"bench_{uuid.uuid4().hex[:8]}@test.local",
@@ -374,7 +369,6 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
     if resp.status_code == 200:
         data["driver_id"] = resp.json()["id"]
 
-    # Start assignment
     if all(k in data for k in ("driver_id", "vehicle_id", "route_id")):
         resp = await client.post(f"{API_BASE}/api/v1/assignments/start", headers=headers, json={
             "driver_id": data["driver_id"],
@@ -387,52 +381,46 @@ async def setup_test_data(client: httpx.AsyncClient, admin_token: str) -> dict:
     return data
 
 
+# ===========================================================================
+# 1. API LATENCY BENCHMARKS (require live server)
+# ===========================================================================
+
 @pytest.mark.asyncio
 async def test_api_latency_health(client: httpx.AsyncClient):
-    """GET /health — should be the fastest endpoint."""
     await _run_benchmark(
         client, "api_latency", "health_check", "GET", "/health",
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
 async def test_api_latency_login(client: httpx.AsyncClient):
-    """POST /api/v1/auth/login — authentication latency."""
     await _run_benchmark(
         client, "api_latency", "auth_login", "POST", "/api/v1/auth/login",
         json_body={"username": ADMIN_USER, "password": ADMIN_PASS},
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
 async def test_api_latency_vehicles_list(client: httpx.AsyncClient, admin_token: str):
-    """GET /api/v1/vehicles — list vehicles."""
     await _run_benchmark(
         client, "api_latency", "vehicles_list", "GET", "/api/v1/vehicles?limit=100",
         headers={"Authorization": f"Bearer {admin_token}"},
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
 async def test_api_latency_routes_list(client: httpx.AsyncClient, admin_token: str):
-    """GET /api/v1/routes — list routes."""
     await _run_benchmark(
         client, "api_latency", "routes_list", "GET", "/api/v1/routes?limit=200",
         headers={"Authorization": f"Bearer {admin_token}"},
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
 async def test_api_latency_stops_list(client: httpx.AsyncClient, admin_token: str):
-    """GET /api/v1/routes/stops — list stops."""
     await _run_benchmark(
         client, "api_latency", "stops_list", "GET", "/api/v1/routes/stops?limit=200",
         headers={"Authorization": f"Bearer {admin_token}"},
-        iterations=ITERATIONS,
     )
 
 
@@ -440,15 +428,13 @@ async def test_api_latency_stops_list(client: httpx.AsyncClient, admin_token: st
 async def test_api_latency_point_to_point_search(
     client: httpx.AsyncClient, setup_test_data: dict
 ):
-    """POST /api/v1/search/point-to-point — core search with ETA computation."""
     stop_ids = setup_test_data.get("stop_ids", [])
     if len(stop_ids) < 2:
-        pytest.skip("Need at least 2 stops for search benchmark")
+        pytest.skip("Need at least 2 stops")
     await _run_benchmark(
         client, "api_latency", "search_point_to_point", "POST",
         "/api/v1/search/point-to-point",
         json_body={"start_stop_id": stop_ids[0], "end_stop_id": stop_ids[-1]},
-        iterations=ITERATIONS,
     )
 
 
@@ -456,10 +442,9 @@ async def test_api_latency_point_to_point_search(
 async def test_api_latency_journey_search(
     client: httpx.AsyncClient, setup_test_data: dict
 ):
-    """POST /api/v1/search/journey — geo-to-stop resolution + search."""
     stop_ids = setup_test_data.get("stop_ids", [])
     if len(stop_ids) < 2:
-        pytest.skip("Need at least 2 stops for search benchmark")
+        pytest.skip("Need at least 2 stops")
     await _run_benchmark(
         client, "api_latency", "search_journey", "POST",
         "/api/v1/search/journey",
@@ -467,18 +452,14 @@ async def test_api_latency_journey_search(
             "start_lat": 9.020, "start_lon": 38.730,
             "end_lat": 9.050, "end_lon": 38.760,
         },
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
-async def test_api_latency_telemetry_gps_only(client: httpx.AsyncClient, setup_test_data: dict):
-    """POST /api/v1/telemetry — GPS-only telemetry ingestion."""
-    vehicle_id = setup_test_data.get("vehicle_id")
-    if not vehicle_id:
-        pytest.skip("Need a vehicle for telemetry benchmark")
-    # We need the device_id — use a known one
-    device_id = setup_test_data.get("device_id", f"BENCH-DEV-{uuid.uuid4().hex[:8]}")
+async def test_api_latency_telemetry_gps(client: httpx.AsyncClient, setup_test_data: dict):
+    device_id = setup_test_data.get("device_id")
+    if not device_id:
+        pytest.skip("Need device_id")
     await _run_benchmark(
         client, "api_latency", "telemetry_gps_only", "POST", "/api/v1/telemetry",
         json_body={
@@ -486,20 +467,17 @@ async def test_api_latency_telemetry_gps_only(client: httpx.AsyncClient, setup_t
             "lat": 9.032, "lon": 38.752,
             "speed": 25.0, "pixel_count": 3000,
         },
-        iterations=ITERATIONS,
     )
 
 
 @pytest.mark.asyncio
-async def test_api_latency_admin_dashboard(
+async def test_api_latency_admin_analytics(
     client: httpx.AsyncClient, admin_token: str
 ):
-    """GET /api/v1/admin/dashboard/analytics — analytics aggregation."""
     await _run_benchmark(
-        client, "api_latency", "admin_dashboard_analytics", "GET",
+        client, "api_latency", "admin_analytics", "GET",
         "/api/v1/admin/dashboard/analytics?days=7",
         headers={"Authorization": f"Bearer {admin_token}"},
-        iterations=max(10, ITERATIONS // 3),  # fewer iterations — heavier query
     )
 
 
@@ -507,29 +485,22 @@ async def test_api_latency_admin_dashboard(
 async def test_api_latency_vehicle_positions(
     client: httpx.AsyncClient, admin_token: str
 ):
-    """GET /api/v1/vehicles/positions — live position aggregation."""
     await _run_benchmark(
         client, "api_latency", "vehicle_positions", "GET",
         "/api/v1/vehicles/positions",
         headers={"Authorization": f"Bearer {admin_token}"},
-        iterations=ITERATIONS,
     )
 
 
 # ===========================================================================
-# 2. TELEMETRY PIPELINE LATENCY (end-to-end)
+# 2. TELEMETRY PIPELINE (requires live server)
 # ===========================================================================
 
 @pytest.mark.asyncio
 async def test_telemetry_pipeline_latency(client: httpx.AsyncClient, setup_test_data: dict):
-    """
-    Measure the full telemetry ingestion pipeline:
-    request → vehicle resolution → GPS validation → Redis update →
-    ETA computation → DB write → response.
-    """
     device_id = setup_test_data.get("device_id")
     if not device_id:
-        pytest.skip("Need a device_id for pipeline benchmark")
+        pytest.skip("Need device_id")
 
     measurements: list[float] = []
     for i in range(WARMUP_ITERATIONS + ITERATIONS):
@@ -538,44 +509,41 @@ async def test_telemetry_pipeline_latency(client: httpx.AsyncClient, setup_test_
             "device_id": device_id,
             "lat": 9.032 + i * 0.0001,
             "lon": 38.752 + i * 0.0001,
-            "speed": 25.0,
-            "pixel_count": 3000,
-        }, timeout=30)
+            "speed": 25.0, "pixel_count": 3000,
+        })
         elapsed = time.monotonic() - t0
         if i >= WARMUP_ITERATIONS and resp.status_code == 200:
             measurements.append(elapsed)
 
     bench.add_stats(
         "telemetry_pipeline", "full_ingestion", "seconds", measurements,
-        details=f"GPS-only, no image. errors={ITERATIONS - len(measurements)}/{ITERATIONS}",
+        details=f"errors={ITERATIONS - len(measurements)}/{ITERATIONS}",
     )
 
 
 # ===========================================================================
-# 3. ETA COMPUTATION LATENCY
+# 3. ETA COMPUTATION (pure Python, no server needed)
 # ===========================================================================
 
 @pytest.mark.asyncio
-async def test_eta_computation_latency():
-    """
-    Measure pure ETA computation time (no network).
-    Tests the heuristic and ML ETA engines directly.
-    """
+async def test_eta_computation_heuristic():
     from app.services.eta_calc import calculate_eta_heuristic
-    from app.services.route_eta import estimate_route_stop_eta_payloads
 
-    # 3a. Heuristic ETA — single pair
     measurements: list[float] = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+    for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
         t0 = time.monotonic()
         calculate_eta_heuristic(9.03, 38.74, 9.05, 38.76, num_stops=5)
         elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
+        if i >= WARMUP_ITERATIONS:
             measurements.append(elapsed)
     bench.add_stats("eta_computation", "heuristic_single_pair", "seconds", measurements)
 
-    # 3b. Route-stop ETA payloads (multiple stops)
+
+@pytest.mark.asyncio
+async def test_eta_computation_route_stops():
     from unittest.mock import MagicMock
+    from app.services.route_eta import estimate_route_stop_eta_payloads
+
     mock_stops = []
     for i in range(10):
         s = MagicMock()
@@ -587,53 +555,52 @@ async def test_eta_computation_latency():
         s.peak_multiplier = 1.0
         mock_stops.append(s)
 
-    measurements = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS):
+    measurements: list[float] = []
+    for i in range(WARMUP_ITERATIONS + ITERATIONS):
         t0 = time.monotonic()
         estimate_route_stop_eta_payloads(
             9.03, 38.74, 30.0, 1, "TEST", 1, mock_stops,
             plate_number="TEST-001", vehicle_id=1,
         )
         elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
+        if i >= WARMUP_ITERATIONS:
             measurements.append(elapsed)
-    bench.add_stats(
-        "eta_computation", "route_stop_payloads_10_stops", "seconds", measurements,
-    )
+    bench.add_stats("eta_computation", "route_stop_payloads_10_stops", "seconds", measurements)
 
-    # 3c. ML ETA (if model loaded)
+
+@pytest.mark.asyncio
+async def test_eta_computation_ml():
     from app.services.ai_predictor import model_loaded
-    if model_loaded():
-        from app.services.eta_engine import get_final_eta
-        measurements = []
-        for _ in range(WARMUP_ITERATIONS + ITERATIONS):
-            t0 = time.monotonic()
-            get_final_eta(9.03, 38.74, 9.05, 38.76, num_stops=5, stop_id=1, occupancy_level=1)
-            elapsed = time.monotonic() - t0
-            if _ >= WARMUP_ITERATIONS:
-                measurements.append(elapsed)
-        bench.add_stats("eta_computation", "ml_eta_with_features", "seconds", measurements)
-    else:
-        bench.add(
-            "eta_computation", "ml_eta_with_features", "seconds", 0.0,
-            0, details="ML model not loaded — skipped",
-        )
+    if not model_loaded():
+        bench.add("eta_computation", "ml_eta", "seconds", 0.0, 0,
+                  details="ML model not loaded — skipped")
+        return
+
+    from app.services.eta_engine import get_final_eta
+    measurements: list[float] = []
+    for i in range(WARMUP_ITERATIONS + ITERATIONS):
+        t0 = time.monotonic()
+        get_final_eta(9.03, 38.74, 9.05, 38.76, num_stops=5, stop_id=1, occupancy_level=1)
+        elapsed = time.monotonic() - t0
+        if i >= WARMUP_ITERATIONS:
+            measurements.append(elapsed)
+    bench.add_stats("eta_computation", "ml_eta_with_features", "seconds", measurements)
 
 
 # ===========================================================================
-# 4. COMPUTER VISION INFERENCE TIME
+# 4. COMPUTER VISION (pure Python, no server needed)
 # ===========================================================================
 
 @pytest.mark.asyncio
 async def test_cv_inference_latency():
-    """
-    Measure YOLOv8 inference time on a synthetic test image.
-    Falls back to HOG if YOLO models are unavailable.
-    """
-    import cv2
-    import numpy as np
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        bench.add("computer_vision", "all", "seconds", 0.0, 0,
+                  details="cv2/numpy not installed — skipped")
+        return
 
-    # Create a synthetic 640x480 test image (bus interior-like)
     frame = np.random.randint(50, 200, (480, 640, 3), dtype=np.uint8)
     _, buf = cv2.imencode(".jpg", frame)
     image_bytes = buf.tobytes()
@@ -641,14 +608,12 @@ async def test_cv_inference_latency():
     from app.services.yolo_detector import YoloDetector
     detector = YoloDetector()
 
-    # Warmup
     for _ in range(3):
         await detector.detect(image_bytes, bus_capacity=40)
 
-    # Measure
     measurements: list[float] = []
     method_used = ""
-    for i in range(max(5, ITERATIONS // 3)):  # CV is slower, fewer iterations
+    for _ in range(max(5, ITERATIONS // 3)):
         t0 = time.monotonic()
         result = await detector.detect(image_bytes, bus_capacity=40)
         elapsed = time.monotonic() - t0
@@ -657,39 +622,197 @@ async def test_cv_inference_latency():
 
     bench.add_stats(
         "computer_vision", "yolo_inference", "seconds", measurements,
-        details=f"640x480 synthetic image, method={method_used}",
+        details=f"640x480 synthetic, method={method_used}",
     )
 
-    # Also measure HOG fallback
     from app.services.cv_engine import analyze_bus_density_from_image
     measurements_hog: list[float] = []
-    for i in range(max(5, ITERATIONS // 3)):
+    for _ in range(max(5, ITERATIONS // 3)):
         t0 = time.monotonic()
         analyze_bus_density_from_image(image_bytes, bus_capacity=40)
         elapsed = time.monotonic() - t0
         measurements_hog.append(elapsed)
 
-    bench.add_stats(
-        "computer_vision", "hog_fallback_inference", "seconds", measurements_hog,
-        details="640x480 synthetic image",
-    )
+    bench.add_stats("computer_vision", "hog_fallback", "seconds", measurements_hog)
 
 
 # ===========================================================================
-# 5. THROUGHPUT TEST
+# 5. ML MODEL INFERENCE (pure Python, no server needed)
+# ===========================================================================
+
+@pytest.mark.asyncio
+async def test_ml_inference_latency():
+    from app.services.ai_predictor import model_loaded
+    if not model_loaded():
+        bench.add("ml_model", "inference", "seconds", 0.0, 0,
+                  details="ML model not loaded — skipped")
+        return
+
+    from app.services.ai_predictor import predict_eta_adjustment
+    from app.services.ml_features import build_feature_dict
+
+    features = build_feature_dict(
+        route_id=1, stop_id=1, stop_sequence=5, remaining_stops=4,
+        distance_m=1500.0, base_dwell_time=30, peak_multiplier=1.5,
+        hour=8, day_of_week=2, is_peak=1, occupancy_level=1,
+        heuristic_eta=180.0,
+    )
+
+    for _ in range(WARMUP_ITERATIONS):
+        predict_eta_adjustment(features)
+
+    measurements: list[float] = []
+    for _ in range(ITERATIONS * 10):
+        t0 = time.monotonic()
+        predict_eta_adjustment(features)
+        elapsed = time.monotonic() - t0
+        measurements.append(elapsed)
+
+    bench.add_stats("ml_model", "single_prediction", "seconds", measurements)
+
+
+# ===========================================================================
+# 6. REDIS OPERATIONS (requires live Redis)
+# ===========================================================================
+
+@pytest.mark.asyncio
+async def test_redis_operation_latency():
+    try:
+        from app.utils.redis_client import get_redis
+        r = await get_redis()
+        await r.ping()
+    except Exception as e:
+        bench.add("redis_operations", "all", "seconds", 0.0, 0,
+                  details=f"Redis unavailable: {e}")
+        return
+
+    key = f"bench_perf_{uuid.uuid4().hex[:8]}"
+
+    # Make sure it doesn't exist and is not a wrong type
+    await r.delete(key)
+
+    try:
+        # SET
+        measurements: list[float] = []
+        for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+            t0 = time.monotonic()
+            await r.set(key, "benchmark_value")
+            elapsed = time.monotonic() - t0
+            if i >= WARMUP_ITERATIONS:
+                measurements.append(elapsed)
+        bench.add_stats("redis_operations", "set", "seconds", measurements)
+
+        # GET
+        measurements = []
+        for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+            t0 = time.monotonic()
+            await r.get(key)
+            elapsed = time.monotonic() - t0
+            if i >= WARMUP_ITERATIONS:
+                measurements.append(elapsed)
+        bench.add_stats("redis_operations", "get", "seconds", measurements)
+
+        # Delete before switching to hash type
+        await r.delete(key)
+
+        # HSET
+        measurements = []
+        for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+            t0 = time.monotonic()
+            await r.hset(key, mapping={"field1": "val1", "field2": "val2", "field3": "val3"})
+            elapsed = time.monotonic() - t0
+            if i >= WARMUP_ITERATIONS:
+                measurements.append(elapsed)
+        bench.add_stats("redis_operations", "hset", "seconds", measurements)
+
+        # HGETALL
+        measurements = []
+        for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+            t0 = time.monotonic()
+            await r.hgetall(key)
+            elapsed = time.monotonic() - t0
+            if i >= WARMUP_ITERATIONS:
+                measurements.append(elapsed)
+        bench.add_stats("redis_operations", "hgetall", "seconds", measurements)
+    finally:
+        await r.delete(key)
+
+
+# ===========================================================================
+# 7. DATABASE QUERIES (requires live DB)
+# ===========================================================================
+
+@pytest.mark.asyncio
+async def test_db_query_latency():
+    try:
+        from app.db.session import AsyncSessionLocal
+        from sqlalchemy import text
+    except Exception as e:
+        bench.add("database", "all", "seconds", 0.0, 0,
+                  details=f"DB imports failed: {e}")
+        return
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # SELECT 1
+            measurements: list[float] = []
+            for i in range(WARMUP_ITERATIONS + ITERATIONS * 10):
+                t0 = time.monotonic()
+                await db.execute(text("SELECT 1"))
+                elapsed = time.monotonic() - t0
+                if i >= WARMUP_ITERATIONS:
+                    measurements.append(elapsed)
+            bench.add_stats("database", "select_1", "seconds", measurements)
+
+            # Count vehicles
+            measurements = []
+            for i in range(WARMUP_ITERATIONS + ITERATIONS):
+                t0 = time.monotonic()
+                await db.execute(text("SELECT COUNT(*) FROM vehicles"))
+                elapsed = time.monotonic() - t0
+                if i >= WARMUP_ITERATIONS:
+                    measurements.append(elapsed)
+            bench.add_stats("database", "count_vehicles", "seconds", measurements)
+
+            # Count stops
+            measurements = []
+            for i in range(WARMUP_ITERATIONS + ITERATIONS):
+                t0 = time.monotonic()
+                await db.execute(text("SELECT COUNT(*) FROM stops"))
+                elapsed = time.monotonic() - t0
+                if i >= WARMUP_ITERATIONS:
+                    measurements.append(elapsed)
+            bench.add_stats("database", "count_stops", "seconds", measurements)
+
+            # Join query
+            measurements = []
+            for i in range(WARMUP_ITERATIONS + ITERATIONS):
+                t0 = time.monotonic()
+                await db.execute(text(
+                    "SELECT r.route_number, COUNT(rs.stop_id) "
+                    "FROM routes r LEFT JOIN route_stops rs ON r.id = rs.route_id "
+                    "GROUP BY r.route_number LIMIT 20"
+                ))
+                elapsed = time.monotonic() - t0
+                if i >= WARMUP_ITERATIONS:
+                    measurements.append(elapsed)
+            bench.add_stats("database", "join_route_stops", "seconds", measurements)
+    except Exception as e:
+        bench.add("database", "all", "seconds", 0.0, 0,
+                  details=f"DB unavailable: {e}")
+
+
+# ===========================================================================
+# 8. THROUGHPUT (requires live server)
 # ===========================================================================
 
 @pytest.mark.asyncio
 async def test_throughput_telemetry(client: httpx.AsyncClient, setup_test_data: dict):
-    """
-    Send telemetry requests as fast as possible for 10 seconds.
-    Count how many succeed per second.
-    """
     device_id = setup_test_data.get("device_id")
     if not device_id:
-        pytest.skip("Need device_id for throughput test")
+        pytest.skip("Need device_id")
 
-    duration = 10  # seconds
+    duration = 10
     success_count = 0
     error_count = 0
     latencies: list[float] = []
@@ -703,8 +826,7 @@ async def test_throughput_telemetry(client: httpx.AsyncClient, setup_test_data: 
                 "device_id": device_id,
                 "lat": 9.032 + (i % 100) * 0.0001,
                 "lon": 38.752 + (i % 100) * 0.0001,
-                "speed": 25.0,
-                "pixel_count": 3000,
+                "speed": 25.0, "pixel_count": 3000,
             }, timeout=5)
             elapsed = time.monotonic() - t0
             if resp.status_code == 200:
@@ -717,20 +839,17 @@ async def test_throughput_telemetry(client: httpx.AsyncClient, setup_test_data: 
         i += 1
 
     throughput_per_sec = success_count / duration
-    bench.add("throughput", "telemetry_requests_per_second", "req/s", throughput_per_sec,
+    bench.add("throughput", "telemetry_req_per_sec", "req/s", throughput_per_sec,
               success_count, details=f"duration={duration}s, errors={error_count}")
     if latencies:
-        bench.add_stats("throughput", "telemetry_request_latency_under_load", "seconds", latencies)
+        bench.add_stats("throughput", "telemetry_latency_under_load", "seconds", latencies)
 
 
 @pytest.mark.asyncio
 async def test_throughput_search(client: httpx.AsyncClient, setup_test_data: dict):
-    """
-    Send search requests as fast as possible for 10 seconds.
-    """
     stop_ids = setup_test_data.get("stop_ids", [])
     if len(stop_ids) < 2:
-        pytest.skip("Need stops for throughput test")
+        pytest.skip("Need stops")
 
     duration = 10
     success_count = 0
@@ -755,30 +874,27 @@ async def test_throughput_search(client: httpx.AsyncClient, setup_test_data: dic
             error_count += 1
 
     throughput_per_sec = success_count / duration
-    bench.add("throughput", "search_requests_per_second", "req/s", throughput_per_sec,
+    bench.add("throughput", "search_req_per_sec", "req/s", throughput_per_sec,
               success_count, details=f"duration={duration}s, errors={error_count}")
     if latencies:
-        bench.add_stats("throughput", "search_request_latency_under_load", "seconds", latencies)
+        bench.add_stats("throughput", "search_latency_under_load", "seconds", latencies)
 
 
 # ===========================================================================
-# 6. CONCURRENT LOAD TEST
+# 9. CONCURRENT LOAD (requires live server)
 # ===========================================================================
 
 @pytest.mark.asyncio
 async def test_concurrent_search_load(client: httpx.AsyncClient, setup_test_data: dict):
-    """
-    Fire 50 concurrent search requests and measure individual latencies.
-    """
     stop_ids = setup_test_data.get("stop_ids", [])
     if len(stop_ids) < 2:
-        pytest.skip("Need stops for concurrent test")
+        pytest.skip("Need stops")
 
     concurrency = 50
     latencies: list[float] = []
     errors = 0
 
-    async def _single_search():
+    async def _single():
         nonlocal errors
         t0 = time.monotonic()
         try:
@@ -794,12 +910,10 @@ async def test_concurrent_search_load(client: httpx.AsyncClient, setup_test_data
         except Exception:
             errors += 1
 
-    # Warmup
-    await _single_search()
+    await _single()  # warmup
     latencies.clear()
 
-    # Concurrent burst
-    await asyncio.gather(*[_single_search() for _ in range(concurrency)])
+    await asyncio.gather(*[_single() for _ in range(concurrency)])
 
     bench.add_stats(
         "concurrent_load", "search_50_concurrent", "seconds", latencies,
@@ -808,175 +922,11 @@ async def test_concurrent_search_load(client: httpx.AsyncClient, setup_test_data
 
 
 # ===========================================================================
-# 7. REDIS OPERATION LATENCY
-# ===========================================================================
-
-@pytest.mark.asyncio
-async def test_redis_operation_latency():
-    """
-    Measure Redis SET, GET, HSET, HGETALL operations.
-    """
-    from app.utils.redis_client import get_redis
-
-    try:
-        r = await get_redis()
-        await r.ping()
-    except Exception as e:
-        bench.add("redis_operations", "all", "seconds", 0.0, 0,
-                  details=f"Redis unavailable: {e}")
-        return
-
-    key = f"bench_{uuid.uuid4().hex[:8]}"
-
-    # SET
-    measurements: list[float] = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
-        t0 = time.monotonic()
-        await r.set(key, "benchmark_value")
-        elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
-            measurements.append(elapsed)
-    bench.add_stats("redis_operations", "set", "seconds", measurements)
-
-    # GET
-    measurements = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
-        t0 = time.monotonic()
-        await r.get(key)
-        elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
-            measurements.append(elapsed)
-    bench.add_stats("redis_operations", "get", "seconds", measurements)
-
-    # HSET
-    measurements = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
-        t0 = time.monotonic()
-        await r.hset(key, mapping={"field1": "val1", "field2": "val2", "field3": "val3"})
-        elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
-            measurements.append(elapsed)
-    bench.add_stats("redis_operations", "hset", "seconds", measurements)
-
-    # HGETALL
-    measurements = []
-    for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
-        t0 = time.monotonic()
-        await r.hgetall(key)
-        elapsed = time.monotonic() - t0
-        if _ >= WARMUP_ITERATIONS:
-            measurements.append(elapsed)
-    bench.add_stats("redis_operations", "hgetall", "seconds", measurements)
-
-    # Cleanup
-    await r.delete(key)
-
-
-# ===========================================================================
-# 8. DATABASE QUERY LATENCY
-# ===========================================================================
-
-@pytest.mark.asyncio
-async def test_db_query_latency():
-    """
-    Measure common database query times.
-    """
-    from app.db.session import AsyncSessionLocal
-    from sqlalchemy import text
-
-    async with AsyncSessionLocal() as db:
-        # Simple SELECT 1
-        measurements: list[float] = []
-        for _ in range(WARMUP_ITERATIONS + ITERATIONS * 10):
-            t0 = time.monotonic()
-            await db.execute(text("SELECT 1"))
-            elapsed = time.monotonic() - t0
-            if _ >= WARMUP_ITERATIONS:
-                measurements.append(elapsed)
-        bench.add_stats("database", "select_1", "seconds", measurements)
-
-        # Count vehicles
-        measurements = []
-        for _ in range(WARMUP_ITERATIONS + ITERATIONS):
-            t0 = time.monotonic()
-            await db.execute(text("SELECT COUNT(*) FROM vehicles"))
-            elapsed = time.monotonic() - t0
-            if _ >= WARMUP_ITERATIONS:
-                measurements.append(elapsed)
-        bench.add_stats("database", "count_vehicles", "seconds", measurements)
-
-        # Count stops
-        measurements = []
-        for _ in range(WARMUP_ITERATIONS + ITERATIONS):
-            t0 = time.monotonic()
-            await db.execute(text("SELECT COUNT(*) FROM stops"))
-            elapsed = time.monotonic() - t0
-            if _ >= WARMUP_ITERATIONS:
-                measurements.append(elapsed)
-        bench.add_stats("database", "count_stops", "seconds", measurements)
-
-        # Join query (route + stops)
-        measurements = []
-        for _ in range(WARMUP_ITERATIONS + ITERATIONS):
-            t0 = time.monotonic()
-            await db.execute(text(
-                "SELECT r.route_number, COUNT(rs.stop_id) "
-                "FROM routes r LEFT JOIN route_stops rs ON r.id = rs.route_id "
-                "GROUP BY r.route_number LIMIT 20"
-            ))
-            elapsed = time.monotonic() - t0
-            if _ >= WARMUP_ITERATIONS:
-                measurements.append(elapsed)
-        bench.add_stats("database", "join_route_stops", "seconds", measurements)
-
-
-# ===========================================================================
-# 9. ML MODEL INFERENCE TIME
-# ===========================================================================
-
-@pytest.mark.asyncio
-async def test_ml_inference_latency():
-    """
-    Measure ML model prediction latency (feature building + inference).
-    """
-    from app.services.ai_predictor import model_loaded, predict_eta_adjustment
-    from app.services.ml_features import build_feature_dict
-
-    if not model_loaded():
-        bench.add("ml_model", "inference", "seconds", 0.0, 0,
-                  details="ML model not loaded — skipped")
-        return
-
-    features = build_feature_dict(
-        route_id=1, stop_id=1, stop_sequence=5, remaining_stops=4,
-        distance_m=1500.0, base_dwell_time=30, peak_multiplier=1.5,
-        hour=8, day_of_week=2, is_peak=1, occupancy_level=1,
-        heuristic_eta=180.0,
-    )
-
-    # Warmup
-    for _ in range(WARMUP_ITERATIONS):
-        predict_eta_adjustment(features)
-
-    measurements: list[float] = []
-    for _ in range(ITERATIONS * 10):
-        t0 = time.monotonic()
-        predict_eta_adjustment(features)
-        elapsed = time.monotonic() - t0
-        measurements.append(elapsed)
-
-    bench.add_stats("ml_model", "single_prediction", "seconds", measurements)
-
-
-# ===========================================================================
-# 10. WEBSOCKET CONNECTION TEST
+# 10. WEBSOCKET (requires live server + websockets package)
 # ===========================================================================
 
 @pytest.mark.asyncio
 async def test_websocket_connection_time(admin_token: str):
-    """
-    Measure WebSocket connection establishment time.
-    """
     try:
         import websockets
     except ImportError:
@@ -987,7 +937,7 @@ async def test_websocket_connection_time(admin_token: str):
     ws_url = API_BASE.replace("http://", "ws://").replace("https://", "wss://")
     measurements: list[float] = []
 
-    for i in range(max(5, ITERATIONS // 5)):
+    for _ in range(max(5, ITERATIONS // 5)):
         t0 = time.monotonic()
         try:
             async with websockets.connect(
