@@ -10,15 +10,12 @@ Provides endpoints to:
 from __future__ import annotations
 
 import csv
-import io
 import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import PlainTextResponse, StreamingResponse
-
-from app.core.config import get_settings
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 
 router = APIRouter(tags=["performance"])
 
