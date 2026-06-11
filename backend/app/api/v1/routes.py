@@ -3,11 +3,14 @@
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.security import RequireAdmin
 from app.crud import route as crud_route
 from app.db.session import get_db
+from app.models.route import Route, RouteStop
 from app.schemas.route import (
     RouteCreate,
     RouteResponse,
@@ -101,6 +104,63 @@ async def get_route(route_id: int, db: AsyncSession = Depends(get_db)):
         destination=r.destination,
         stops=stops,
     )
+
+
+@router.get("/routes/by-number/{route_number}", response_model=RouteWithStops)
+async def get_route_by_number_full(route_number: str, direction: str | None = None, db: AsyncSession = Depends(get_db)):
+    """Return a route with all its stops, looked up by route number.
+
+    Used by the bus dashboard for route search / assignment.
+    Optional direction filter: 'forward' or 'reverse'.
+    """
+    stmt = select(Route).where(Route.route_number == route_number)
+    if direction:
+        stmt = stmt.where(Route.direction == direction)
+    result = await db.execute(stmt.options(selectinload(Route.route_stops).selectinload(RouteStop.stop)))
+    r = result.scalars().first()
+    if not r:
+        raise HTTPException(404, "Route not found")
+    stops = [rs.stop for rs in sorted(r.route_stops, key=lambda x: x.sequence_order)]
+    return RouteWithStops(
+        id=r.id,
+        route_number=r.route_number,
+        direction=r.direction,
+        name=r.name,
+        origin=r.origin,
+        destination=r.destination,
+        active=r.active,
+        stops=stops,
+    )
+
+
+@router.get("/routes/search", response_model=list[RouteWithStops])
+async def search_routes(q: str, limit: int = 10, db: AsyncSession = Depends(get_db)):
+    """Search routes by number or name prefix. Returns routes with stops."""
+    limit = min(limit, 50)
+    stmt = (
+        select(Route)
+        .where(
+            (Route.route_number.ilike(f"{q}%")) | (Route.name.ilike(f"{q}%"))
+        )
+        .options(selectinload(Route.route_stops).selectinload(RouteStop.stop))
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    routes = list(result.scalars().unique().all())
+    out = []
+    for r in routes:
+        stops = [rs.stop for rs in sorted(r.route_stops, key=lambda x: x.sequence_order)]
+        out.append(RouteWithStops(
+            id=r.id,
+            route_number=r.route_number,
+            direction=r.direction,
+            name=r.name,
+            origin=r.origin,
+            destination=r.destination,
+            active=r.active,
+            stops=stops,
+        ))
+    return out
 
 
 @router.get("/routes/{route_number}/etas")
