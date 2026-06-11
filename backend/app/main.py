@@ -20,6 +20,7 @@ from app.api.v1 import (
     gateway,
     notifications,
     pairing,
+    performance,
     routes,
     search,
     tracking,
@@ -173,3 +174,4 @@ app.include_router(
     driver_assignments.router, prefix="/api/v1", tags=["driver-assignments"]
 )
 app.include_router(trip_history.router, prefix="/api/v1", tags=["trip-history"])
+app.include_router(performance.router, prefix="/api/v1", tags=["performance"])
