@@ -289,7 +289,19 @@ async def client():
 
 
 @pytest.fixture(scope="session")
-async def admin_token(client: httpx.AsyncClient) -> str:
+async def _server_reachable(client: httpx.AsyncClient) -> bool:
+    """Check if the backend is reachable. Skip entire module if not."""
+    try:
+        resp = await client.get(f"{API_BASE}/health", timeout=5)
+        if resp.status_code < 400:
+            return True
+    except Exception:
+        pass
+    pytest.skip("Backend not reachable — skipping all performance benchmarks")
+
+
+@pytest.fixture(scope="session")
+async def admin_token(client: httpx.AsyncClient, _server_reachable: bool) -> str:
     """Login as admin and return JWT token."""
     resp = await client.post(f"{API_BASE}/api/v1/auth/login", json={
         "username": ADMIN_USER, "password": ADMIN_PASS
