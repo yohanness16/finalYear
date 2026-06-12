@@ -20,7 +20,7 @@ import json
 import logging
 from fastapi import WebSocket
 
-from app.utils.redis_client import get_redis
+from app.utils.redis_client import get_redis, get_pubsub_redis  # FIX 1: import dedicated pubsub getter
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +145,10 @@ class ConnectionManager:
         Auto-reconnects on failure with 5-second backoff.
         """
         while self._running:
+            pubsub = None
             try:
-                client = await get_redis()
+                # FIX 2: use dedicated pubsub pool — never competes with pipeline/hset commands
+                client = await get_pubsub_redis()
                 pubsub = client.pubsub()
                 await pubsub.subscribe(CHANNEL_VEHICLE_POSITION, CHANNEL_CV_RESULT)
                 logger.info("Subscribed to Redis WebSocket channels")
@@ -172,6 +174,15 @@ class ConnectionManager:
                 break
             except Exception:
                 logger.exception("Redis subscribe loop error, reconnecting in 5s...")
+            finally:
+                # FIX 3: always release the pubsub connection before retrying
+                # (previously this was missing — every failed retry leaked a connection)
+                if pubsub is not None:
+                    try:
+                        await pubsub.aclose()
+                    except Exception:
+                        pass
+            if self._running:
                 await asyncio.sleep(5)
 
     async def _forward_to_locals(self, channel: str, data: dict) -> None:
