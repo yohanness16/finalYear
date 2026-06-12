@@ -93,7 +93,7 @@ async def set_bus_live_pipeline(
             },
         )
         pipe.expire(key_cv, ttl)
-        # Redis Stream for live consumers
+        # Redis Stream for live consumers (capped at 10k entries to prevent OOM)
         pipe.xadd(
             "pipe:positions",
             {
@@ -103,6 +103,8 @@ async def set_bus_live_pipeline(
                 "occupancy": str(occupancy),
                 "assignment_id": str(assignment_id),
             },
+            maxlen=10000,
+            approximate=True,
         )
         await pipe.execute()
 
@@ -200,7 +202,7 @@ async def set_last_position(plate: str, lat: float, lon: float, ttl: int = 300) 
 async def push_live_position(plate: str, payload: dict) -> None:
     client = await get_redis()
     fields = {"plate": plate, **{k: str(v) for k, v in payload.items()}}
-    await client.xadd("pipe:positions", fields)
+    await client.xadd("pipe:positions", fields, maxlen=10000, approximate=True)
 
 
 async def close_redis_cache() -> None:

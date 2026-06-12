@@ -185,7 +185,8 @@ class TestImagePipeline:
         assert lon == 38.74
 
     @pytest.mark.asyncio
-    async def test_validate_gps_off_route(self):
+    async def test_validate_gps_off_route_fallback(self):
+        """Off-route GPS should use fallback (last known good) instead of rejecting."""
         from app.services.image_pipeline import _validate_gps
 
         # Create mock route stops far from the test coordinate
@@ -193,11 +194,39 @@ class TestImagePipeline:
         mock_stop.latitude = 10.0
         mock_stop.longitude = 40.0
 
-        with patch("app.services.image_pipeline.is_on_route", return_value=False):
+        with patch("app.services.image_pipeline.is_on_route", return_value=False), \
+             patch("app.services.image_pipeline.get_last_coords", return_value=[]):
+            # No history to fall back on — accepts with no rejection (graceful)
             lat, lon, rejection = await _validate_gps(
                 9.03, 38.74, "TEST-001", [mock_stop]
             )
-            assert rejection == "off_route"
+            # New behavior: no rejection when no history (don't lose data)
+            assert rejection is None
+
+    @pytest.mark.asyncio
+    async def test_validate_gps_off_route_with_history(self):
+        """Off-route GPS with history should fall back to last known good position."""
+        from app.services.image_pipeline import _validate_gps
+
+        mock_stop = MagicMock()
+        mock_stop.latitude = 10.0
+        mock_stop.longitude = 40.0
+
+        # History has a valid on-route position
+        history = [{"lat": 9.032, "lon": 38.752}]
+
+        with patch("app.services.image_pipeline.is_on_route") as mock_on_route, \
+             patch("app.services.image_pipeline.get_last_coords", return_value=history):
+            # First call (for current position) = off-route
+            # Second call (for historical position) = on-route
+            mock_on_route.side_effect = [False, True]
+            lat, lon, rejection = await _validate_gps(
+                9.03, 38.74, "TEST-001", [mock_stop]
+            )
+            # Should fall back to historical position
+            assert rejection is None
+            assert lat == 9.032
+            assert lon == 38.752
 
     @pytest.mark.asyncio
     async def test_store_image(self, tmp_path):

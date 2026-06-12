@@ -123,26 +123,45 @@ async def _validate_gps(
     lat: float, lon: float, plate: str, route_stops: list
 ) -> tuple[float, float, str | None]:
     """
-    Validate GPS coordinates.
+    Validate GPS coordinates with graceful degradation.
 
     Returns (lat, lon, rejection_reason).
     rejection_reason is None if valid.
-    """
-    # On-route check
-    if route_stops and not is_on_route(lat, lon, route_stops):
-        return lat, lon, "off_route"
 
-    # Outlier check against Redis history
+    Strategy:
+      1. Outlier check first (catches GPS jumps)
+      2. On-route check with relaxed threshold (500m + segment projection)
+      3. If off-route but not an outlier, use last known good position
+         instead of rejecting — keeps the bus visible on the map
+    """
+    # ── Outlier check against Redis history ──
     try:
         last_coords = await get_last_coords(plate)
     except Exception:
         last_coords = []
 
-    if last_coords and not is_valid_coord(lat, lon, last_coords):
+    is_outlier = last_coords and not is_valid_coord(lat, lon, last_coords)
+
+    if is_outlier:
         avg = get_average_coord(last_coords)
         if avg:
-            return avg[0], avg[1], None  # Use averaged coords
-        return lat, lon, "gps_outlier"
+            # Use averaged historical coords instead of the outlier
+            lat, lon = avg[0], avg[1]
+        else:
+            return lat, lon, "gps_outlier"
+
+    # ── On-route check (relaxed: 500m + segment projection) ──
+    if route_stops and not is_on_route(lat, lon, route_stops):
+        # Don't reject outright — use last known good position if available
+        if last_coords:
+            avg = get_average_coord(last_coords)
+            if avg:
+                # Check if the historical position is on-route
+                if is_on_route(avg[0], avg[1], route_stops):
+                    return avg[0], avg[1], None  # Fall back to last known good
+        # No history to fall back on — accept with warning (don't lose data)
+        # The bus may be on a valid segment that's just far from stored stops
+        return lat, lon, None
 
     return lat, lon, None
 

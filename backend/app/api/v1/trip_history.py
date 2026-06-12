@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.security import CurrentUser
+from app.core.security import RequireAdmin
 from app.db.session import get_db
 
 router = APIRouter(tags=["trip-history"])
@@ -51,12 +51,12 @@ def _to_out(row) -> TripHistoryOut:
 )
 async def get_trip_history_by_vehicle(
     vehicle_id: int,
-    current_user: CurrentUser,
+    current_user: RequireAdmin,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Read trip history for all assignments of a given vehicle."""
+    """Read trip history for all assignments of a given vehicle. Admin only."""
     from app.models.assignment import Assignment
     from app.models.trip_history import TripHistory
 
@@ -86,10 +86,10 @@ async def get_trip_history_by_vehicle(
 )
 async def get_trip_history_by_assignment(
     assignment_id: int,
-    current_user: CurrentUser,
+    current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db),
 ):
-    """Read trip history for a specific assignment."""
+    """Read trip history for a specific assignment. Admin only."""
     from app.models.trip_history import TripHistory
 
     result = await db.execute(

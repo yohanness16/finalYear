@@ -569,6 +569,9 @@ class YoloDetector:
             hog_result["boxes"] = []
             hog_result["face_boxes"] = []
             hog_result["head_boxes"] = []
+            # Ensure all expected keys are present for API consumers
+            hog_result.setdefault("face_count", 0)
+            hog_result.setdefault("head_blob_count", 0)
             return hog_result
 
         # Decode foreground ratio for edge case when all tiers detect 0

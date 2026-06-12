@@ -1,10 +1,12 @@
 """Performance benchmark results API.
 
 Provides endpoints to:
-  - Run benchmarks on-demand (POST)
   - Download results as CSV (GET)
   - View results as JSON (GET)
   - Get a summary report (GET)
+  - Get a formatted text report (GET)
+
+All endpoints require admin authentication.
 """
 
 from __future__ import annotations
@@ -14,8 +16,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
+
+from app.core.security import RequireAdmin
 
 router = APIRouter(tags=["performance"])
 
@@ -24,16 +28,12 @@ CSV_PATH = RESULTS_DIR / "benchmark_results.csv"
 JSON_PATH = RESULTS_DIR / "benchmark_results.json"
 
 
-def _require_admin():
-    """Placeholder — actual auth enforced by router inclusion."""
-    pass
-
-
 @router.get("/admin/performance/csv")
-async def download_csv():
+async def download_csv(current_user: RequireAdmin):
     """
     Download benchmark results as a CSV file.
     Returns the raw CSV with Content-Disposition header for download.
+    Admin only.
     """
     if not CSV_PATH.exists():
         raise HTTPException(
@@ -54,8 +54,8 @@ async def download_csv():
 
 
 @router.get("/admin/performance/json")
-async def get_results_json():
-    """Return benchmark results as JSON."""
+async def get_results_json(current_user: RequireAdmin):
+    """Return benchmark results as JSON. Admin only."""
     if not JSON_PATH.exists():
         # Try to build from CSV
         if CSV_PATH.exists():
@@ -75,10 +75,10 @@ async def get_results_json():
 
 
 @router.get("/admin/performance/summary")
-async def get_summary():
+async def get_summary(current_user: RequireAdmin):
     """
     Return a human-readable summary of benchmark results.
-    Groups by category and shows mean values.
+    Groups by category and shows mean values. Admin only.
     """
     if not CSV_PATH.exists():
         raise HTTPException(
@@ -89,7 +89,7 @@ async def get_summary():
     rows: list[dict[str, Any]] = []
     with open(CSV_PATH, newline="") as f:
         reader = csv.DictReader(f)
-        for row in reader:
+        for row in rows:
             rows.append(row)
 
     if not rows:
@@ -122,9 +122,9 @@ async def get_summary():
 
 
 @router.get("/admin/performance/report")
-async def get_report():
+async def get_report(current_user: RequireAdmin):
     """
-    Return a formatted text report suitable for inclusion in thesis.
+    Return a formatted text report suitable for inclusion in thesis. Admin only.
     """
     if not CSV_PATH.exists():
         raise HTTPException(status_code=404, detail="No benchmark results found.")

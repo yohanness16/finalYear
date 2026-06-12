@@ -42,8 +42,8 @@ class _FakePipeline:
     def set(self, key, value, ex=None):
         self._ops.append(("set", key, value, ex))
 
-    def xadd(self, stream, mapping):
-        self._ops.append(("xadd", stream, mapping))
+    def xadd(self, stream, mapping, maxlen=None, approximate=False):
+        self._ops.append(("xadd", stream, mapping, maxlen))
 
     async def __aenter__(self):
         return self
@@ -68,9 +68,12 @@ class _FakePipeline:
                 _, key, value, _ex = op
                 self._store[key] = value
             elif op[0] == "xadd":
-                _, stream, mapping = op
+                _, stream, mapping, maxlen = op
                 self._store.setdefault(stream, [])
                 self._store[stream].append(mapping)
+                if maxlen is not None:
+                    while len(self._store[stream]) > maxlen:
+                        self._store[stream].pop(0)
         return True
 
 
@@ -124,6 +127,16 @@ class FakeRedis:
 
     async def geoadd(self, key, member):
         self._store.setdefault(key, set()).add(member)
+
+    async def xadd(self, name, fields, maxlen=None, approximate=False):
+        """Track stream entries; enforce maxlen if provided (for test accuracy)."""
+        self._store.setdefault(name, [])
+        entry_id = f"{len(self._store[name]):015d}-0"
+        self._store[name].append({k: str(v) for k, v in fields.items()})
+        if maxlen is not None:
+            while len(self._store[name]) > maxlen:
+                self._store[name].pop(0)
+        return entry_id
 
     async def publish(self, channel, message):
         # No-op for tests

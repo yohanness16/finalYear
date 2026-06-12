@@ -2,7 +2,7 @@
 
 from app.core.config import get_settings
 from app.services.ai_predictor import predict_eta_adjustment
-from app.services.eta_calc import calculate_eta_heuristic, haversine_meters
+from app.services.eta_calc import calculate_eta_heuristic, get_time_multiplier
 from app.services.ml_features import build_feature_dict, time_features
 
 
@@ -22,19 +22,23 @@ def get_final_eta(
     confidence_mode is 'heuristic' or 'ml'.
     If use_ml_for_prod is None, falls back to env USE_ML_FOR_PROD.
     """
+    # Use actual peak multiplier so ML features match heuristic computation
+    peak_multiplier = get_time_multiplier()
+
     h_eta = calculate_eta_heuristic(
-        lat1, lon1, lat2, lon2, num_stops, base_dwell_time, None, occupancy_level
+        lat1, lon1, lat2, lon2, num_stops, base_dwell_time,
+        peak_multiplier, occupancy_level
     )
-    distance_m = haversine_meters(lat1, lon1, lat2, lon2)
+    # Pass peak_multiplier to ML features (was hardcoded 1.0, causing mismatch)
     hour, dow, is_peak = time_features(None)
     features = build_feature_dict(
         route_id=0,
         stop_id=int(stop_id or 0),
         stop_sequence=max(1, num_stops),
         remaining_stops=max(0, num_stops - 1),
-        distance_m=distance_m,
+        distance_m=float(h_eta) * 10.0,  # derive from heuristic instead of recomputing haversine
         base_dwell_time=base_dwell_time,
-        peak_multiplier=1.0,
+        peak_multiplier=peak_multiplier,
         hour=hour,
         day_of_week=dow,
         is_peak=is_peak,

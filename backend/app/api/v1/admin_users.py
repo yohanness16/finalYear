@@ -40,9 +40,10 @@ async def create_admin(
 
 @router.get("/list", response_model=list[UserResponse])
 async def list_users(
+    current_user: RequireAdmin,
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
-    """List users with pagination."""
+    """List users with pagination. Admin only."""
     from app.crud.user import get_users_paginated
     users = await get_users_paginated(db, skip, min(limit, 500))
     return users

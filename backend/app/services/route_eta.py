@@ -47,7 +47,9 @@ def estimate_route_stop_eta_payloads(
     if not route_stops:
         return {}
 
-    speed_ms = max(speed_kmh / 3.6, 6.0)
+    # Don't fabricate speed when bus is stopped — use actual speed with
+    # a small floor to avoid division-by-zero for near-stationary buses.
+    speed_ms = speed_kmh / 3.6 if speed_kmh > 0 else 1.0  # 1 m/s floor when stopped
     occupancy_multiplier = {0: 1.0, 1: 1.12, 2: 1.28}.get(occupancy_level, 1.0)
     payloads: dict[int, dict[str, Any]] = {}
     computed_at = int(time.time())
@@ -96,21 +98,20 @@ def estimate_route_stop_eta_payloads(
             adjustment = predict_eta_adjustment(features)
             segment_adjustments.append(float(adjustment or 0.0))
 
+    # O(n) running accumulator for dwell time (was O(n²) with inner loop)
+    dwell_accumulator = 0.0
+
     for idx, stop in enumerate(route_stops):
         distance_m = haversine_meters(lat, lon, stop.lat, stop.lon)
         travel_seconds = distance_m / speed_ms
 
-        # Sum dwell for all stops from the nearest stop through this stop
-        # (inclusive). The nearest stop needs dwell time for boarding/alighting
-        # as does every intermediate stop the bus must stop at before reaching
-        # the target stop. Only include dwell for stops at or after the
-        # nearest stop (the bus hasn't passed those yet).
-        dwell_seconds = 0.0
-        for s in route_stops[nearest_idx : idx + 1]:
-            dwell_seconds += (s.base_dwell_time or 30) * (s.peak_multiplier or 1.0)
+        # Accumulate dwell time: add this stop's dwell when we reach/past it.
+        # Before nearest_idx the bus has already passed, so no dwell needed.
+        if idx >= nearest_idx:
+            dwell_accumulator += (stop.base_dwell_time or 30) * (stop.peak_multiplier or 1.0)
 
         heuristic_eta = int(
-            (travel_seconds + dwell_seconds * occupancy_multiplier) + 0.5
+            (travel_seconds + dwell_accumulator * occupancy_multiplier) + 0.5
         )
         eta_seconds = heuristic_eta
         eta_mode = "heuristic"
