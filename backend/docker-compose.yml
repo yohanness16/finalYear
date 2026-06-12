@@ -91,10 +91,27 @@ services:
     networks:
       - bustrack-net
 
+  # ── Mosquitto MQTT Broker (local development) ──────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: bustrack-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    restart: unless-stopped
+    networks:
+      - bustrack-net
+
 volumes:
   postgres_data:
   redis_data:
   esp32_storage:
+  mosquitto_data:
+  mosquitto_log:
 
 networks:
   bustrack-net:

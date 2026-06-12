@@ -63,6 +63,30 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Push notification worker disabled (no FCM_SERVER_KEY)")
 
+    # Start MQTT-Kafka bridge (if enabled)
+    _bridge = None
+    _consumer = None
+    if settings.MQTT_ENABLED and settings.KAFKA_ENABLED:
+        try:
+            from app.services.mqtt_kafka_bridge import get_mqtt_kafka_bridge
+            _bridge = await get_mqtt_kafka_bridge(settings)
+            if _bridge:
+                await _bridge.start()
+                logger.info("MQTT-Kafka bridge started")
+        except Exception:
+            logger.exception("Failed to start MQTT-Kafka bridge")
+
+        try:
+            from app.services.telemetry_consumer import get_telemetry_consumer
+            _consumer = await get_telemetry_consumer(settings)
+            if _consumer:
+                await _consumer.start()
+                logger.info("Kafka telemetry consumer started")
+        except Exception:
+            logger.exception("Failed to start Kafka telemetry consumer")
+    else:
+        logger.info("MQTT/Kafka disabled (set MQTT_ENABLED=true KAFKA_ENABLED=true to enable)")
+
     yield
 
     # Shutdown
@@ -76,6 +100,19 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "Notification worker did not stop within timeout; forcing cancel"
             )
+
+    if _consumer:
+        try:
+            await _consumer.stop()
+        except Exception:
+            logger.exception("Error stopping Kafka consumer")
+
+    if _bridge:
+        try:
+            await _bridge.stop()
+        except Exception:
+            logger.exception("Error stopping MQTT-Kafka bridge")
+
     await ws_manager.stop()
     await close_redis()
     await close_redis_cache()

@@ -83,6 +83,26 @@ class Settings(BaseSettings):
     # Base URL of the frontend app (for verification/reset links)
     APP_BASE_URL: str = "https://bustrack.dpdns.org"
 
+    # ── MQTT ────────────────────────────────────────────────────────────────
+    MQTT_ENABLED: bool = False
+    MQTT_BROKER_HOST: str = "mosquitto"
+    MQTT_BROKER_PORT: int = 1883
+    MQTT_USERNAME: str = "bustrack"
+    MQTT_PASSWORD: str = ""
+    MQTT_KEEPALIVE: int = 60
+    MQTT_BASE_TOPIC: str = "bus"
+
+    # ── Kafka ───────────────────────────────────────────────────────────────
+    KAFKA_ENABLED: bool = False
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_GROUP_ID: str = "bustrack-consumers"
+    KAFKA_TELEMETRY_TOPIC: str = "telemetry.gps"
+    KAFKA_IMAGE_TOPIC: str = "telemetry.image"
+    KAFKA_PROCESSED_TOPIC: str = "telemetry.processed"
+    KAFKA_BATCH_SIZE: int = 50
+    KAFKA_AUTO_OFFSET_RESET: str = "latest"
+    KAFKA_MAX_POLL_INTERVAL_MS: int = 300000
+
 
 @lru_cache
 def get_settings() -> Settings:
