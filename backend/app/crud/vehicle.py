@@ -39,6 +39,11 @@ async def get_vehicle_by_plate(db: AsyncSession, plate_number: str) -> Vehicle |
     return result.scalar_one_or_none()
 
 
+# Alias used by the vehicle registration endpoint
+async def get_plate_number(db: AsyncSession, plate_number: str) -> Vehicle | None:
+    return await get_vehicle_by_plate(db, plate_number)
+
+
 async def get_vehicles(
     db: AsyncSession, skip: int = 0, limit: int = 100
 ) -> list[Vehicle]:
