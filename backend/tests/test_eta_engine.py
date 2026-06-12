@@ -3,9 +3,7 @@
 import time
 from unittest.mock import patch
 
-import pytest
-
-from app.services.eta_calc import calculate_eta_heuristic, get_time_multiplier, haversine_meters
+from app.services.eta_calc import calculate_eta_heuristic, haversine_meters
 from app.services.eta_engine import get_final_eta
 from app.services.route_eta import estimate_route_stop_eta_payloads
 

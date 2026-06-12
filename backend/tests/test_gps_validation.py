@@ -1,7 +1,5 @@
 """GPS outlier rejection tests + route validation tests."""
 
-import pytest
-
 from app.services.route_validation import (
     _point_to_segment_distance_m,
     find_nearest_stop,
