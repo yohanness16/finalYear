@@ -113,7 +113,7 @@ async def get_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
 async def admin_update_vehicle(
     vehicle_id: int,
     body: VehicleAdminUpdate,
-    current_user: RequireAdmin,
+    current_user: User = Depends(RequireAdmin),  # ✅ add Depends()
     db: AsyncSession = Depends(get_db),
 ):
     """Set optional fields such as route_id for corridor validation."""
