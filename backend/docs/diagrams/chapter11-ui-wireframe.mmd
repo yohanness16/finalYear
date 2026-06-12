@@ -1,0 +1,29 @@
+flowchart TD
+    subgraph "Admin Dashboard Layout"
+        HEADER["Header: Logo + Search + User Menu + Theme Toggle"]
+        SIDEBAR["Sidebar: Dashboard | Map | Vehicles | Routes | Assignments | Users | Settings"]
+        MAIN["Main Content Area"]
+    end
+
+    subgraph "Dashboard Page"
+        KPI["KPI Cards Row<br/>Active Assignments | Vehicles | Routes | Users"]
+        MAP["Live Map Panel<br/>Leaflet + Bus Markers + Route Lines"]
+        CHARTS["Analytics Charts<br/>Assignments Over Time | Occupancy Distribution<br/>ETA Accuracy | Route Usage"]
+    end
+
+    subgraph "Bus Detail Panel"
+        BUS_INFO["Vehicle Info<br/>Plate | Driver | Route | Speed"]
+        CAMERA["Camera Feed<br/>Live ESP32-CAM Stream"]
+        PROGRESS["Route Progress<br/>Stop-by-Stop Visual Bar"]
+        TRIP_HIST["Trip History Table<br/>Stop | Arrival | Dwell | Occupancy"]
+    end
+
+    HEADER --> MAIN
+    SIDEBAR --> MAIN
+    MAIN --> KPI
+    KPI --> MAP
+    MAP --> CHARTS
+    MAP --> BUS_INFO
+    BUS_INFO --> CAMERA
+    BUS_INFO --> PROGRESS
+    BUS_INFO --> TRIP_HIST

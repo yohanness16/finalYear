@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Yohannes Desalegn" />
+  <meta name="dcterms.date" content="2026-06-10" />
+  <title>Chapter 4: Implementation</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Chapter 4: Implementation</h1>
+<p class="subtitle">BusTrack — Real-Time Public Transport Tracking and
+Crowd Density Prediction System</p>
+<p class="author">Yohannes Desalegn</p>
+<p class="date">June 10, 2026</p>
+</header>
+<h1 id="chapter-4-implementation">Chapter 4: Implementation</h1>
+<p>This chapter focuses on the actual realization of the proposed
+BusTrack system. While Chapter 3 discusses the design and methodology,
+Chapter 4 explains how the system was physically and logically
+implemented, integrated, configured, and debugged. The implementation
+follows the architectural decisions made in the design phase,
+translating the three-tier architecture (Physical Collection, Cloud
+Processing, User Presentation) into working software, hardware, and
+machine learning components.</p>
+<h2 id="overview">4.1 Overview</h2>
+<p>The BusTrack system was implemented using a bottom-up approach,
+beginning with the hardware firmware, followed by the backend API, then
+the frontend dashboards and mobile application, and finally the machine
+learning pipelines. This approach ensured that each layer was fully
+functional before integrating it with the layers above, reducing
+debugging complexity and enabling parallel development across
+subsystems.</p>
+<p>The implementation spans four major subsystems:</p>
+<ul>
+<li><strong>Firmware</strong> — ESP32-CAM on each bus captures GPS
+coordinates and camera images</li>
+<li><strong>Backend</strong> — FastAPI server processes telemetry, runs
+CV/ML algorithms, serves data via REST and WebSocket</li>
+<li><strong>Dashboards</strong> — Next.js admin and bus driver
+interfaces for fleet management and ride operations</li>
+<li><strong>Mobile App</strong> — Flutter passenger application for
+real-time bus tracking and crowd density information</li>
+</ul>
+<p>The technology stack was selected to balance performance, developer
+productivity, and deployment flexibility:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Backend</td>
+<td>Python 3.11, FastAPI, SQLAlchemy async</td>
+<td>API server, data processing</td>
+</tr>
+<tr class="even">
+<td>Database</td>
+<td>PostgreSQL 15, PostGIS</td>
+<td>Geospatial data storage</td>
+</tr>
+<tr class="odd">
+<td>Cache</td>
+<td>Redis 7</td>
+<td>Real-time caching, pub/sub messaging</td>
+</tr>
+<tr class="even">
+<td>Admin Dashboard</td>
+<td>Next.js 14, TypeScript, Tailwind CSS, shadcn/ui</td>
+<td>Fleet management interface</td>
+</tr>
+<tr class="odd">
+<td>Driver Dashboard</td>
+<td>Next.js 14, TypeScript, Tailwind CSS</td>
+<td>Bus driver ride interface</td>
+</tr>
+<tr class="even">
+<td>Mobile App</td>
+<td>Flutter 3.x, Dart 3, Riverpod, GoRouter</td>
+<td>Passenger tracking application</td>
+</tr>
+<tr class="odd">
+<td>ML — Crowd</td>
+<td>YOLOv8-nano, OpenCV</td>
+<td>Crowd density detection</td>
+</tr>
+<tr class="even">
+<td>ML — ETA</td>
+<td>RandomForest (scikit-learn)</td>
+<td>ETA prediction correction</td>
+</tr>
+<tr class="odd">
+<td>Firmware</td>
+<td>Arduino/C++, ESP32-CAM, NEO-6M</td>
+<td>On-bus data collection</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.1:</strong> Technology stack summary for the BusTrack
+system.</p>
+<h2 id="hardware-implementation">4.2 Hardware Implementation</h2>
+<p>The hardware subsystem consists of an ESP32-CAM module paired with a
+NEO-6M GPS receiver, mounted inside each bus. This section describes the
+component selection rationale, physical assembly, wiring, and firmware
+implementation.</p>
+<h3 id="esp32-cam-and-neo-6m-gps-module-integration">4.2.1 ESP32-CAM and
+NEO-6M GPS Module Integration</h3>
+<p>The ESP32-CAM (AI-Thinker variant) was selected as the primary
+onboard computing unit for several practical reasons:</p>
+<ul>
+<li>Dual-core Xtensa LX6 processor at 240 MHz</li>
+<li>520 KB SRAM + up to 4 MB external PSRAM for JPEG buffering</li>
+<li>Built-in Wi-Fi (802.11 b/g/n) eliminates need for separate wireless
+module</li>
+<li>OV2640 camera supports QVGA (320x240) with PSRAM</li>
+<li>Unit cost approximately USD 8-10, viable for fleet-wide
+deployment</li>
+</ul>
+<p>The NEO-6M GPS module was chosen for:</p>
+<ul>
+<li>Positional accuracy of approximately 2.5 meters under open sky</li>
+<li>Reliable NMEA sentence output (GGA, RMC)</li>
+<li>UART communication at 9600 baud, compatible with ESP32</li>
+<li>Low power consumption (approximately 45 mA during acquisition)</li>
+</ul>
+<p>The functional division between the two components is
+straightforward: the NEO-6M continuously outputs GGA and RMC NMEA
+sentences containing latitude, longitude, speed, and fix status, while
+the ESP32-CAM captures JPEG images at QVGA resolution (320x240) when
+triggered by the telemetry timer. Both data streams are combined into a
+single multipart HTTP POST request and transmitted to the backend every
+60 seconds.</p>
+<figure>
+<img src="backend/docs/diagrams/chapter4/01-hardware-block-diagram.png"
+alt="Hardware Block Diagram" />
+<figcaption aria-hidden="true">Hardware Block Diagram</figcaption>
+</figure>
+<p><strong>Figure 4.1:</strong> Hardware block diagram showing the
+ESP32-CAM, NEO-6M GPS module, power supply, and their
+interconnections.</p>
+<h3 id="hardware-assembly-and-wiring">4.2.2 Hardware Assembly and
+Wiring</h3>
+<p>The physical assembly follows a specific placement strategy optimized
+for each component’s function:</p>
+<ul>
+<li><strong>ESP32-CAM</strong> — Mounted on the bus ceiling, facing
+downward at approximately 45 degrees, to capture a top-down view of the
+passenger area. This angle maximizes visible floor area and minimizes
+occlusion from seat backs.</li>
+<li><strong>NEO-6M GPS</strong> — Positioned near a window or on the
+dashboard to ensure consistent satellite signal reception.</li>
+<li><strong>Power</strong> — Drawn from the bus 12V electrical system
+through a buck converter stepping down to 5V. A 1000 uF capacitor across
+the GPS power input smooths voltage fluctuations from the alternator and
+starter motor.</li>
+</ul>
+<p>The wiring connections between the ESP32-CAM and NEO-6M are
+minimal:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Signal</th>
+<th>ESP32-CAM Pin</th>
+<th>NEO-6M Pin</th>
+<th>Wire Color</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>GPS Data Out</td>
+<td>GPIO 14 (UART2 RX)</td>
+<td>TX</td>
+<td>Yellow</td>
+</tr>
+<tr class="even">
+<td>GPS Commands</td>
+<td>GPIO 15 (UART2 TX)</td>
+<td>RX</td>
+<td>White</td>
+</tr>
+<tr class="odd">
+<td>Power</td>
+<td>5V</td>
+<td>VCC</td>
+<td>Red</td>
+</tr>
+<tr class="even">
+<td>Ground</td>
+<td>GND</td>
+<td>GND</td>
+<td>Black</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.2:</strong> Wiring connections between ESP32-CAM and
+NEO-6M GPS module.</p>
+<p>These GPIO pins were specifically chosen because they do not conflict
+with the camera data pins (GPIO 0-5, 12-16 for camera data and clock
+signals).</p>
+<p>Environmental considerations during assembly included:</p>
+<ul>
+<li>Vibration damping using rubber grommets for mounting screws</li>
+<li>Heat management ensuring adequate airflow around the ESP32 voltage
+regulator</li>
+<li>Antenna orientation positioning the GPS antenna with a clear view of
+the sky</li>
+</ul>
+<figure>
+<img src="backend/docs/diagrams/chapter4/02-wiring-diagram.png"
+alt="Wiring Diagram" />
+<figcaption aria-hidden="true">Wiring Diagram</figcaption>
+</figure>
+<p><strong>Figure 4.2:</strong> Wiring schematic showing connections
+between ESP32-CAM, NEO-6M GPS, and power supply.</p>
+<h3 id="firmware-implementation">4.2.3 Firmware Implementation</h3>
+<p>The firmware follows a structured architecture with a setup phase and
+a continuous main loop. During setup:</p>
+<ol type="1">
+<li>Camera is initialized with PSRAM detection (falling back to QQVGA if
+PSRAM unavailable)</li>
+<li>GPS UART is configured at 9600 baud on GPIO 14/15</li>
+<li>Wi-Fi connection is established with automatic reconnection
+logic</li>
+<li>A startup heartbeat is sent to the backend <code>/health</code>
+endpoint</li>
+</ol>
+<p>The main loop operates on a non-blocking design:</p>
+<ul>
+<li>Continuously feeds GPS data from the UART buffer</li>
+<li>Checks a 15-second heartbeat timer</li>
+<li>Checks a 60-second telemetry timer</li>
+<li>Parses NMEA sentences using TinyGPSPlus library</li>
+</ul>
+<p>A three-tier GPS resolution strategy ensures reliable position
+data:</p>
+<ol type="1">
+<li><strong>Tier 1</strong> — Fresh GPS fix with valid checksum</li>
+<li><strong>Tier 2</strong> — Last known good coordinate from
+history</li>
+<li><strong>Tier 3</strong> — Configurable fallback coordinate (default:
+Addis Ababa city center at 9.032, 38.752)</li>
+</ol>
+<p>When the telemetry timer expires, the firmware:</p>
+<ol type="1">
+<li>Captures a JPEG frame from the camera</li>
+<li>Reads current GPS coordinates</li>
+<li>Constructs multipart form-data payload (device_id, plate, bus_type,
+lat, lon, speed, capacity, image)</li>
+<li>Transmits via HTTPS POST to
+<code>/api/v1/gateway/esp32/telemetry</code></li>
+<li>Blinks status LED (GPIO 4) — green for success, red for failure</li>
+</ol>
+<p>Reliability features include:</p>
+<ul>
+<li>Watchdog timer that resets the ESP32 if the main loop hangs during
+large uploads</li>
+<li>Camera self-check and recovery on initialization failure</li>
+<li>Telemetry counter tracking attempts versus successful
+transmissions</li>
+<li>Built-in diagnostic web server at the ESP32 IP address showing GPS
+fix status, NMEA history, Wi-Fi signal strength, and telemetry success
+rate</li>
+</ul>
+<figure>
+<img src="backend/docs/diagrams/chapter4/03-firmware-flowchart.png"
+alt="Firmware Flowchart" />
+<figcaption aria-hidden="true">Firmware Flowchart</figcaption>
+</figure>
+<p><strong>Figure 4.3:</strong> Complete firmware execution flow from
+boot through the main telemetry loop.</p>
+<h2 id="software-implementation">4.3 Software Implementation</h2>
+<p>The software subsystem encompasses the backend API server, two
+Next.js frontend dashboards, and the Flutter mobile application. This
+section describes the development environment, module organization,
+database schema, and user interface implementation.</p>
+<h3 id="development-environment-setup">4.3.1 Development Environment
+Setup</h3>
+<p>The development environment was configured as follows:</p>
+<p><strong>Backend:</strong></p>
+<ul>
+<li>Python 3.11 with FastAPI as the web framework</li>
+<li>SQLAlchemy 2.0 with async support for database operations</li>
+<li>Alembic for schema migrations</li>
+<li>PostgreSQL 15 with PostGIS extension for geospatial queries</li>
+<li>Redis 7 for caching and pub/sub messaging</li>
+<li>Docker Compose orchestrating three containers: FastAPI (port 8000),
+PostgreSQL (port 5433), Redis (port 6479)</li>
+</ul>
+<p><strong>Frontend (Admin Dashboard):</strong></p>
+<ul>
+<li>Node.js 20 with Next.js 14 (App Router)</li>
+<li>TypeScript 5, Tailwind CSS 3.4</li>
+<li>shadcn/ui component library built on Radix UI primitives</li>
+<li>Leaflet for map rendering, Recharts for data visualization</li>
+</ul>
+<p><strong>Frontend (Driver Dashboard):</strong></p>
+<ul>
+<li>Same stack as admin dashboard</li>
+<li>Separate Next.js project running on port 3001</li>
+<li>Optimized for tablet use inside the bus</li>
+</ul>
+<p><strong>Mobile Application:</strong></p>
+<ul>
+<li>Flutter 3.x with Dart 3</li>
+<li>Riverpod for state management, GoRouter for declarative
+navigation</li>
+<li>Dio for HTTP communication</li>
+<li>Firebase Cloud Messaging (FCM) for push notifications</li>
+<li>Supports both Android and iOS from a single codebase</li>
+</ul>
+<p><strong>Environment variables</strong> managed through
+<code>.env</code> files for each project:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>SECRET_KEY</code></td>
+<td>JWT token signing</td>
+</tr>
+<tr class="even">
+<td><code>DATABASE_URL</code></td>
+<td>PostgreSQL connection string</td>
+</tr>
+<tr class="odd">
+<td><code>REDIS_URL</code></td>
+<td>Redis connection string</td>
+</tr>
+<tr class="even">
+<td><code>GOOGLE_CLIENT_ID</code></td>
+<td>Google OAuth client ID</td>
+</tr>
+<tr class="odd">
+<td><code>FCM_SERVER_KEY</code></td>
+<td>Firebase push notification key</td>
+</tr>
+<tr class="even">
+<td><code>USE_ML_FOR_PROD</code></td>
+<td>Toggle ML-based ETA prediction</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.3:</strong> Critical environment variables for system
+configuration.</p>
+<h3 id="module-implementation">4.3.2 Module Implementation</h3>
+<p><strong>Backend Modules.</strong> The backend is organized into 21
+API router modules, each handling a specific domain:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Router</th>
+<th>Endpoints</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>auth</code></td>
+<td>13</td>
+<td>Registration, login (email/password, OAuth), driver login, email
+verification, password reset</td>
+</tr>
+<tr class="even">
+<td><code>vehicles</code></td>
+<td>7</td>
+<td>Vehicle registry, position tracking, route assignment, telemetry
+ingestion</td>
+</tr>
+<tr class="odd">
+<td><code>routes</code> / <code>stops</code></td>
+<td>6</td>
+<td>Route and stop CRUD with sequence ordering</td>
+</tr>
+<tr class="even">
+<td><code>assignments</code></td>
+<td>3</td>
+<td>Admin trip management (start/end/list active)</td>
+</tr>
+<tr class="odd">
+<td><code>driver_assignments</code></td>
+<td>3</td>
+<td>Driver self-service trip management</td>
+</tr>
+<tr class="even">
+<td><code>gateway</code></td>
+<td>1</td>
+<td>ESP32 multipart telemetry upload</td>
+</tr>
+<tr class="odd">
+<td><code>tracking</code></td>
+<td>1</td>
+<td>SIM7600 GPS telemetry</td>
+</tr>
+<tr class="even">
+<td><code>search</code></td>
+<td>2</td>
+<td>Point-to-point journey planning with live ETAs</td>
+</tr>
+<tr class="odd">
+<td><code>admin_dashboard</code></td>
+<td>11</td>
+<td>Dashboard charts, ML training, ETA preview, settings</td>
+</tr>
+<tr class="even">
+<td><code>admin_users</code></td>
+<td>7</td>
+<td>User CRUD, search, role management</td>
+</tr>
+<tr class="odd">
+<td><code>crowd</code></td>
+<td>1</td>
+<td>CV crowd density results</td>
+</tr>
+<tr class="even">
+<td><code>favorites</code></td>
+<td>3</td>
+<td>User saved routes</td>
+</tr>
+<tr class="odd">
+<td><code>ratings</code></td>
+<td>3</td>
+<td>Journey feedback</td>
+</tr>
+<tr class="even">
+<td><code>notifications</code></td>
+<td>3</td>
+<td>FCM token registration, proximity alerts</td>
+</tr>
+<tr class="odd">
+<td><code>pairing</code></td>
+<td>3</td>
+<td>Device pairing codes, verification, unpairing</td>
+</tr>
+<tr class="even">
+<td><code>trip_history</code></td>
+<td>2</td>
+<td>Trip history read endpoints</td>
+</tr>
+<tr class="odd">
+<td><code>users</code></td>
+<td>2</td>
+<td>Profile management</td>
+</tr>
+<tr class="even">
+<td><code>websocket</code></td>
+<td>1</td>
+<td>Admin live stream</td>
+</tr>
+<tr class="odd">
+<td><code>websocket_mobile</code></td>
+<td>1</td>
+<td>Passenger mobile stream</td>
+</tr>
+<tr class="even">
+<td><code>admin</code></td>
+<td>1</td>
+<td>ML toggle</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.4:</strong> API router modules with endpoint counts
+and purposes.</p>
+<p>The middleware stack processes incoming requests in a specific order
+(outermost to innermost):</p>
+<ol type="1">
+<li><strong>CORS</strong> — Configurable origins, credentials
+handling</li>
+<li><strong>Security Headers</strong> — HSTS (1 year), CSP,
+X-Frame-Options DENY, no-cache for API</li>
+<li><strong>Request Validation</strong> — Body size limits (1 MB JSON,
+10 MB multipart), content-type enforcement, path traversal
+detection</li>
+<li><strong>Firewall</strong> — IP blocklist, auto-ban on abuse, burst
+detection, user-agent blocking</li>
+</ol>
+<p>Rate limiting uses a dual system:</p>
+<ul>
+<li>Slowapi decorators for per-endpoint limits (e.g., 20/min for auth,
+300/min for telemetry)</li>
+<li>Redis-backed sliding window for IP-based throttling with tiered
+limits</li>
+</ul>
+<figure>
+<img src="backend/docs/diagrams/chapter4/04-api-router-organization.png"
+alt="API Router Organization" />
+<figcaption aria-hidden="true">API Router Organization</figcaption>
+</figure>
+<p><strong>Figure 4.4:</strong> API router organization showing 21
+routers grouped by functional domain.</p>
+<p><strong>Frontend Modules.</strong> The admin dashboard follows a
+component-based architecture:</p>
+<ul>
+<li><strong>App Shell</strong> — Collapsible sidebar, top navigation
+bar, breadcrumb trail</li>
+<li><strong>Dashboard Page</strong> — KPI cards (active assignments,
+vehicles, routes, users), ETA accuracy charts, live map</li>
+<li><strong>Vehicles Page</strong> — Fleet registry with pairing code
+generation</li>
+<li><strong>Routes Page</strong> — Route and stop management</li>
+<li><strong>Assignments Page</strong> — Live trip monitoring</li>
+<li><strong>Users Page</strong> — Driver and admin account
+management</li>
+<li><strong>Settings Page</strong> — ML model training, ETA mode toggle,
+data cleanup</li>
+</ul>
+<p>Custom hooks encapsulate complex logic:</p>
+<ul>
+<li><code>useBusDashboardWebSocket</code> — WebSocket connections with
+auto-reconnect and message filtering by vehicle ID</li>
+<li><code>useAuth</code> — JWT-based authentication with automatic 401
+redirect</li>
+<li><code>useLiveVehiclePositions</code> — Merges WebSocket position
+updates with REST-fetched initial data</li>
+<li><code>useTheme</code> — Dark/light theme switching</li>
+</ul>
+<p>The bus driver dashboard authentication flow has four steps:</p>
+<ol type="1">
+<li><strong>Device Pairing</strong> — First-time setup with a pairing
+code</li>
+<li><strong>Device Unlock</strong> — IMEI and dashboard password</li>
+<li><strong>Driver Login</strong> — Username and password</li>
+<li><strong>Main Dashboard</strong> — Live map, speed, crowd density,
+route progress, start/end ride buttons</li>
+</ol>
+<figure>
+<img src="backend/docs/diagrams/chapter4/05-component-hierarchy.png"
+alt="Component Hierarchy" />
+<figcaption aria-hidden="true">Component Hierarchy</figcaption>
+</figure>
+<p><strong>Figure 4.5:</strong> Admin dashboard component hierarchy
+showing the App Shell, page components, shared hooks, and UI
+components.</p>
+<p><strong>Mobile Application Modules.</strong> The Flutter application
+follows a feature-based clean architecture:</p>
+<ul>
+<li><strong>Core Layer</strong> — <code>ApiClient</code> (Dio with auth
+interceptor), <code>AuthInterceptor</code> (JWT attachment and 401
+handling), <code>SessionEventBus</code> (cross-feature session state),
+<code>FCMService</code> (push notification registration),
+<code>AppRouter</code> (GoRouter with auth redirects)</li>
+<li><strong>Auth Feature</strong> — Login, register, password reset,
+email verification</li>
+<li><strong>Home Feature</strong> — Main map view with live bus
+positions</li>
+<li><strong>Search Feature</strong> — Journey planning with stop picker,
+results, route detail</li>
+<li><strong>Favorites Feature</strong> — Saved routes and stops</li>
+<li><strong>Ratings Feature</strong> — Journey feedback</li>
+<li><strong>Notifications Feature</strong> — Proximity alert
+configuration</li>
+</ul>
+<p>The application uses a dual transport strategy:</p>
+<ul>
+<li><strong>Primary</strong> — WebSocket for real-time updates
+(sub-second latency)</li>
+<li><strong>Fallback</strong> — REST polling every 15 seconds when
+WebSocket disconnected</li>
+<li><strong>Reconnection</strong> — Exponential backoff from 1 second to
+30 seconds cap</li>
+</ul>
+<h3 id="database-and-api-implementation">4.3.3 Database and API
+Implementation</h3>
+<p>The database schema consists of 14 tables designed to support the
+full range of system operations:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Table</th>
+<th>Purpose</th>
+<th>Key Columns</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>users</code></td>
+<td>Account information with role-based access</td>
+<td>id, username, email, password_hash, role
+(passenger/driver/admin)</td>
+</tr>
+<tr class="even">
+<td><code>vehicles</code></td>
+<td>Bus registry with IoT device binding</td>
+<td>id, plate_number, device_id (IMEI), capacity, route_id (FK)</td>
+</tr>
+<tr class="odd">
+<td><code>routes</code></td>
+<td>Route definitions</td>
+<td>id, route_number, direction (forward/reverse), name, origin,
+destination</td>
+</tr>
+<tr class="even">
+<td><code>stops</code></td>
+<td>Bus stop metadata</td>
+<td>id, name, lat, lon, base_dwell_time, is_terminal,
+peak_multiplier</td>
+</tr>
+<tr class="odd">
+<td><code>route_stops</code></td>
+<td>Stop sequence per route (many-to-many)</td>
+<td>route_id (FK), stop_id (FK), sequence_order</td>
+</tr>
+<tr class="even">
+<td><code>assignments</code></td>
+<td>Active trips (driver + vehicle + route)</td>
+<td>id, driver_id (FK), vehicle_id (FK), route_id (FK), start_time,
+end_time, status</td>
+</tr>
+<tr class="odd">
+<td><code>driver_bus_sessions</code></td>
+<td>Driver logins on bus devices</td>
+<td>id, driver_id (FK), vehicle_id (FK), login_at, logout_at,
+status</td>
+</tr>
+<tr class="even">
+<td><code>raw_telemetry</code></td>
+<td>Bronze layer unprocessed hardware data</td>
+<td>id, vehicle_id (FK), raw_lat, raw_lon, raw_payload (JSONB)</td>
+</tr>
+<tr class="odd">
+<td><code>trip_history</code></td>
+<td>Stop-level events for ML training</td>
+<td>id, assignment_id (FK), stop_id (FK), arrival_time, dwell_time,
+occupancy_level, heuristic_eta, ml_eta, actual_travel_time</td>
+</tr>
+<tr class="even">
+<td><code>model_performance</code></td>
+<td>Heuristic vs ML comparison</td>
+<td>id, trip_history_id (FK), heuristic_error, ml_error</td>
+</tr>
+<tr class="odd">
+<td><code>favorites</code></td>
+<td>User saved routes</td>
+<td>id, user_id (FK), route_id (FK), nickname</td>
+</tr>
+<tr class="even">
+<td><code>ratings</code></td>
+<td>Journey feedback</td>
+<td>id, user_id (FK), assignment_id (FK), score (1-5), comment</td>
+</tr>
+<tr class="odd">
+<td><code>notification_settings</code></td>
+<td>Proximity alerts</td>
+<td>id, user_id (FK), route_id (FK), stop_id (FK),
+lead_time_minutes</td>
+</tr>
+<tr class="even">
+<td><code>system_settings</code></td>
+<td>Runtime configuration</td>
+<td>id, key, value</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.5:</strong> Database schema showing all 14 tables
+with purposes and key columns.</p>
+<p>Key design decisions:</p>
+<ul>
+<li>Async SQLAlchemy with <code>AsyncSession</code> for non-blocking
+database operations</li>
+<li><code>server_default=func.now()</code> for automatic timestamp
+management</li>
+<li>Composite primary keys for <code>route_stops</code> (route_id,
+stop_id)</li>
+<li>Foreign key cascading deletes where appropriate</li>
+<li>JSONB column in <code>raw_telemetry</code> for flexible payload
+storage</li>
+</ul>
+<p>Redis serves as the real-time data layer with these key patterns:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Key Pattern</th>
+<th>Type</th>
+<th>TTL</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>bus:live:{plate}</code></td>
+<td>Hash</td>
+<td>5 min</td>
+<td>Live position (lat, lon, speed, occupancy, assignment_id)</td>
+</tr>
+<tr class="even">
+<td><code>veh:cv:{plate}</code></td>
+<td>Hash</td>
+<td>5 min</td>
+<td>CV results (people_count, crowd_density, confidence, method)</td>
+</tr>
+<tr class="odd">
+<td><code>veh:pos:{plate}</code></td>
+<td>String (JSON)</td>
+<td>5 min</td>
+<td>Last known position</td>
+</tr>
+<tr class="even">
+<td><code>veh:hist:{plate}</code></td>
+<td>List</td>
+<td>5 min</td>
+<td>Last 5 GPS coordinates for validation</td>
+</tr>
+<tr class="odd">
+<td><code>route:{no}:stop:{id}</code></td>
+<td>Hash</td>
+<td>5 min</td>
+<td>Per-stop ETA data (eta_seconds, distance_m, occupancy, mode)</td>
+</tr>
+<tr class="even">
+<td><code>active_buses</code></td>
+<td>Geo</td>
+<td>—</td>
+<td>Geospatial index for nearby bus lookup</td>
+</tr>
+<tr class="odd">
+<td><code>pipe:positions</code></td>
+<td>Stream</td>
+<td>—</td>
+<td>Live position stream for consumers</td>
+</tr>
+<tr class="even">
+<td><code>ws:vehicle_position</code></td>
+<td>Pub/Sub</td>
+<td>—</td>
+<td>Cross-worker position broadcast channel</td>
+</tr>
+<tr class="odd">
+<td><code>ws:cv_result</code></td>
+<td>Pub/Sub</td>
+<td>—</td>
+<td>Cross-worker CV result broadcast channel</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.6:</strong> Redis key patterns with data types, TTLs,
+and purposes.</p>
+<figure>
+<img src="backend/docs/diagrams/chapter4/06-er-diagram.png"
+alt="ER Diagram" />
+<figcaption aria-hidden="true">ER Diagram</figcaption>
+</figure>
+<p><strong>Figure 4.6:</strong> Entity-relationship diagram showing all
+14 database tables and their relationships.</p>
+<p>The API follows RESTful conventions with an <code>/api/v1</code>
+prefix. All endpoints use Pydantic schemas for request validation and
+response serialization. The authentication system uses:</p>
+<ul>
+<li><strong>JWT tokens</strong> — HS256 algorithm, 24-hour expiry,
+payload:
+<code>{sub: user_id, exp: timestamp, type: "access"}</code></li>
+<li><strong>Role-based access</strong> — <code>RequireAdmin</code>
+(admin only), <code>RequireDriver</code> (driver or admin),
+<code>CurrentUser</code> (any authenticated)</li>
+<li><strong>Public endpoints</strong> — Vehicle positions, route ETAs,
+health check require no authentication</li>
+</ul>
+<h3 id="user-interface-implementation">4.3.4 User Interface
+Implementation</h3>
+<p><strong>Admin Dashboard UI:</strong></p>
+<ul>
+<li>Dark-first design with pure black background (#09090B), neon cyan
+and green accents</li>
+<li>Space Grotesk typeface for headings, Inter for body text</li>
+<li>Sidebar navigation with collapsible sections for fleet management,
+operations, and analytics</li>
+<li>KPI cards showing: active assignments, total vehicles, routes,
+users</li>
+<li>Charts: assignments over time (bar), occupancy distribution (pie),
+ETA accuracy (line), route usage (bar)</li>
+<li>Real-time bus map with Leaflet: custom markers showing plate number,
+color-coded by occupancy (green/yellow/red)</li>
+<li>Bus detail popup: current speed, driver name, route, crowd
+density</li>
+</ul>
+<p><strong>Bus Driver Dashboard UI:</strong></p>
+<ul>
+<li>Driver-first design with large touch targets (minimum 48px
+height)</li>
+<li>Minimal text, glanceable information for use while driving</li>
+<li>Live map with bus position and route overlay</li>
+<li>Stat cards: speed, crowd density, next stop ETA</li>
+<li>Route progress bar showing passed stops (checkmark), current stop
+(dot), upcoming stops (circle)</li>
+<li>Prominent start/end ride buttons</li>
+<li>Glove-compatible design, works in varying lighting conditions</li>
+</ul>
+<p><strong>Mobile App UI:</strong></p>
+<ul>
+<li>Material 3 design with custom theming</li>
+<li>Main map screen: user location, nearby stops, live bus positions
+with occupancy badges</li>
+<li>Journey search: autocomplete stop picker, results with ETA, crowd
+level, walking distance</li>
+<li>Bottom navigation: Map | Search | Favorites | Profile</li>
+<li>Push notifications for proximity alerts</li>
+</ul>
+<h2 id="aiml-model-implementation">4.4 AI/ML Model Implementation</h2>
+<p>The system implements two machine learning pipelines: a computer
+vision pipeline for crowd density detection and a regression model for
+ETA prediction. Both pipelines were designed to work with limited
+computational resources and to degrade gracefully when ML models are
+unavailable.</p>
+<h3 id="crowd-density-detection-pipeline">4.4.1 Crowd Density Detection
+Pipeline</h3>
+<p>The crowd density detection system addresses the challenge of
+estimating passenger count from a ceiling-mounted camera in a moving
+bus. This is fundamentally different from street-level pedestrian
+detection because:</p>
+<ul>
+<li>The camera angle is top-down rather than side-on</li>
+<li>Passengers are often partially occluded by seats and luggage</li>
+<li>Lighting conditions vary dramatically between day and night</li>
+<li>Motion blur from bus movement affects image quality</li>
+</ul>
+<p>The system uses a three-tier detection architecture:</p>
+<p><strong>Tier 1 — YOLOv8-nano Full-Body Detection:</strong></p>
+<ul>
+<li>Model: YOLOv8-nano (approximately 6 MB), auto-downloaded from
+Ultralytics</li>
+<li>Detects COCO class 0 (person) at confidence threshold 0.35</li>
+<li>Catches upright, fully visible passengers</li>
+<li>Runs on best available device (CUDA &gt; MPS &gt; CPU)</li>
+</ul>
+<p><strong>Tier 2 — YOLOv8-nano Face Detection:</strong></p>
+<ul>
+<li>Separate face detection model at confidence threshold 0.30</li>
+<li>Catches passengers whose bodies are occluded but faces visible</li>
+<li>Gracefully degrades if face model unavailable</li>
+</ul>
+<p><strong>Tier 3 — Head-Blob Contour Analysis:</strong></p>
+<ul>
+<li>Classical CV pipeline for top-down camera angles</li>
+<li>Steps: grayscale conversion, CLAHE contrast enhancement, adaptive
+thresholding, morphological cleanup</li>
+<li>Contour filtering: area 800-25000 px, circularity &gt;= 0.45, aspect
+ratio 0.5-2.0, solidity &gt;= 0.5</li>
+<li>Parameters determined empirically from sample bus interior
+images</li>
+</ul>
+<p><strong>Deduplication:</strong></p>
+<ul>
+<li>IoU-based overlap removal prevents double-counting</li>
+<li>Person-face overlap threshold: 0.30</li>
+<li>Person-head and face-head overlap threshold: 0.25</li>
+<li>Final count = unique Tier 1 + unique Tier 2 + unique Tier 3</li>
+</ul>
+<p><strong>Density Classification:</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Condition</th>
+<th>Low (0)</th>
+<th>Medium (1)</th>
+<th>High (2)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>With capacity</td>
+<td>load ratio &lt; 10%</td>
+<td>load ratio &lt; 50%</td>
+<td>load ratio &gt;= 50%</td>
+</tr>
+<tr class="even">
+<td>Without capacity</td>
+<td>count &lt;= 1</td>
+<td>count &lt;= 4</td>
+<td>count &gt;= 5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.7:</strong> Density classification thresholds with
+and without known bus capacity.</p>
+<p><strong>Fallback:</strong> If YOLO models fail to load, the system
+falls back to OpenCV HOG person detector combined with foreground ratio
+analysis.</p>
+<figure>
+<img src="backend/docs/diagrams/chapter4/07-cv-pipeline-flowchart.png"
+alt="CV Pipeline Flowchart" />
+<figcaption aria-hidden="true">CV Pipeline Flowchart</figcaption>
+</figure>
+<p><strong>Figure 4.7:</strong> Computer vision pipeline showing the
+three detection tiers, deduplication, and density classification.</p>
+<h3 id="eta-prediction-model">4.4.2 ETA Prediction Model</h3>
+<p>The ETA prediction system uses a two-tier approach:</p>
+<p><strong>Heuristic Baseline:</strong></p>
+<ul>
+<li>Haversine formula for great-circle distance between bus position and
+each remaining stop</li>
+<li>Average speed: 10 m/s (36 km/h, representative of urban bus speeds
+in Addis Ababa)</li>
+<li>Dwell time = sum of (base_dwell_time * peak_multiplier *
+occupancy_factor) for each remaining stop</li>
+<li>Peak hours: 7:00-9:30 (1.5x), 16:30-19:30 (1.8x)</li>
+<li>Occupancy penalty: Level 0 = 1.0x, Level 1 = 1.2x, Level 2 =
+1.4x</li>
+</ul>
+<p><strong>ML Residual Correction:</strong></p>
+<ul>
+<li>Model: RandomForestRegressor (120 estimators, max_depth=14)</li>
+<li>Predicts the residual error of the heuristic calculation (not
+absolute ETA)</li>
+<li>12 input features:</li>
+</ul>
+<table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>route_id</td>
+<td>Route identifier</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>stop_id</td>
+<td>Stop identifier</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>stop_sequence</td>
+<td>Position in route stop sequence</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>remaining_stops</td>
+<td>Number of stops remaining</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>distance_m</td>
+<td>Distance to stop in meters</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>base_dwell_time</td>
+<td>Base dwell time at stop</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>peak_multiplier</td>
+<td>Peak hour multiplier</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>hour</td>
+<td>Hour of day (0-23)</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>day_of_week</td>
+<td>Day of week (0-6)</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>is_peak_hour</td>
+<td>Boolean peak hour flag</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>occupancy_level</td>
+<td>Current occupancy (0/1/2)</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>heuristic_eta</td>
+<td>Heuristic ETA value</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.8:</strong> Twelve input features for the
+RandomForest ETA residual model.</p>
+<p><strong>Training Pipeline:</strong></p>
+<ul>
+<li>Data source: <code>trip_history</code> table with actual travel
+times between consecutive stops</li>
+<li>Target variable: actual_travel_time - heuristic_eta (the
+residual)</li>
+<li>Minimum 50 samples required before training</li>
+<li>80/20 train/test split</li>
+<li>Evaluation metrics: MAE (Mean Absolute Error), RMSE (Root Mean
+Square Error)</li>
+<li>Model serialized to <code>delay_predictor.joblib</code> with feature
+names</li>
+</ul>
+<p><strong>Inference:</strong></p>
+<ul>
+<li>System checks <code>USE_ML_FOR_PROD</code> toggle in database</li>
+<li>If enabled and model loaded:
+<code>final_eta = heuristic_eta + predicted_residual</code></li>
+<li>If disabled or model unavailable: returns heuristic ETA with mode
+“heuristic”</li>
+<li>Graceful degradation ensures ETA estimates are always available</li>
+</ul>
+<figure>
+<img
+src="backend/docs/diagrams/chapter4/08-eta-computation-flowchart.png"
+alt="ETA Computation Flowchart" />
+<figcaption aria-hidden="true">ETA Computation Flowchart</figcaption>
+</figure>
+<p><strong>Figure 4.8:</strong> ETA computation flow showing heuristic
+calculation, ML residual prediction, and the admin toggle.</p>
+<h2 id="system-integration">4.5 System Integration</h2>
+<p>System integration connects the hardware firmware, backend
+processing, and client applications into a cohesive real-time tracking
+system.</p>
+<h3 id="hardware-software-integration">4.5.1 Hardware-Software
+Integration</h3>
+<p>The integration between the ESP32-CAM firmware and the backend
+follows a well-defined protocol:</p>
+<ol type="1">
+<li>ESP32 boots, reads stored Wi-Fi credentials and device
+configuration</li>
+<li>Connects to local Wi-Fi network</li>
+<li>Sends startup heartbeat to <code>/health</code> endpoint</li>
+<li>Every 60 seconds: captures JPEG + reads GPS, constructs multipart
+payload, sends HTTPS POST to
+<code>/api/v1/gateway/esp32/telemetry</code></li>
+</ol>
+<p>The backend gateway endpoint delegates to the unified
+<code>process_telemetry()</code> pipeline:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Action</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Vehicle resolution by device_id</td>
+<td>Auto-provision if new device</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>GPS validation against last 5 positions</td>
+<td>Reject outliers &gt; 500m delta</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Image storage + CV analysis</td>
+<td>Crowd density (0/1/2)</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Raw telemetry persistence</td>
+<td>JSONB record in PostgreSQL</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Redis live pipeline update</td>
+<td>bus:live, veh:cv, veh:pos</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>ETA computation per stop</td>
+<td>Heuristic + optional ML</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Vehicle position update</td>
+<td>last_lat, last_lon in PostgreSQL</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Trip history recording</td>
+<td>Stop-level events for ML</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>WebSocket broadcast</td>
+<td>vehicle_position + cv_result</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.9:</strong> Nine-step telemetry processing pipeline
+from ingestion to broadcast.</p>
+<figure>
+<img src="backend/docs/diagrams/chapter4/09-end-to-end-data-flow.png"
+alt="End-to-End Data Flow" />
+<figcaption aria-hidden="true">End-to-End Data Flow</figcaption>
+</figure>
+<p><strong>Figure 4.9:</strong> End-to-end data flow from ESP32 through
+all nine processing steps to the client applications.</p>
+<h3 id="communication-interface-implementation">4.5.2 Communication
+Interface Implementation</h3>
+<p><strong>REST API:</strong></p>
+<ul>
+<li>80+ endpoints under <code>/api/v1/</code> prefix</li>
+<li>Pydantic schemas for request validation and response
+serialization</li>
+<li>Async SQLAlchemy throughout for non-blocking database
+operations</li>
+<li>Consistent error responses with HTTP status codes</li>
+</ul>
+<p><strong>WebSocket with Redis Pub/Sub:</strong></p>
+<p>The critical architectural fix for multi-worker deployment:</p>
+<ul>
+<li><strong>Problem:</strong> In-memory connection list broke with
+multiple Gunicorn workers (each worker had its own list)</li>
+<li><strong>Solution:</strong> Redis Pub/Sub fan-out — any worker
+publishes to <code>ws:vehicle_position</code> channel, all workers
+receive and forward to local connections</li>
+<li><strong>Admin WebSocket</strong> — Receives all vehicle positions
+(no filter)</li>
+<li><strong>Mobile WebSocket</strong> — Includes
+<code>subscribed_route_id</code>, receives only positions for subscribed
+route</li>
+</ul>
+<p><strong>Mobile App Dual Transport:</strong></p>
+<ul>
+<li>WebSocket primary (sub-second latency)</li>
+<li>REST polling fallback (every 15 seconds)</li>
+<li>Exponential backoff reconnection (1s to 30s cap)</li>
+<li>Route subscription via WebSocket messages</li>
+</ul>
+<p><strong>FCM Push Notifications:</strong></p>
+<ul>
+<li>Background worker checks every 60 seconds for buses approaching
+user-subscribed stops</li>
+<li>5-minute cooldown per notification to prevent spam</li>
+<li>Notification includes bus plate, route, ETA, and crowd level</li>
+</ul>
+<figure>
+<img
+src="backend/docs/diagrams/chapter4/10-websocket-pubsub-architecture.png"
+alt="WebSocket Pub/Sub Architecture" />
+<figcaption aria-hidden="true">WebSocket Pub/Sub
+Architecture</figcaption>
+</figure>
+<p><strong>Figure 4.10:</strong> WebSocket Redis pub/sub architecture
+showing two Gunicorn workers with local connections connected via Redis
+pub/sub channels.</p>
+<h3 id="integration-testing">4.5.3 Integration Testing</h3>
+<p>Integration testing verified interoperability between all
+subsystems:</p>
+<ul>
+<li><strong>ESP32-to-backend:</strong> <code>curl</code> with multipart
+form data simulates device uploads without physical hardware</li>
+<li><strong>WebSocket verification:</strong> Connect to
+<code>/api/v1/ws/live</code> with admin JWT, verify position messages
+arrive after telemetry posts</li>
+<li><strong>End-to-end scenario:</strong> Register device -&gt; send
+telemetry -&gt; verify vehicle on admin live map -&gt; verify CV results
+in Redis -&gt; verify ETA computation -&gt; verify mobile app receives
+updates</li>
+<li><strong>Simulation mode:</strong> Python scripts generate synthetic
+GPS data along predefined routes for testing without physical
+hardware</li>
+<li><strong>Concurrent devices:</strong> Multiple simultaneous device
+uploads verify multi-worker WebSocket broadcasting</li>
+</ul>
+<h2 id="deployment-and-configuration">4.6 Deployment and
+Configuration</h2>
+<p>The production deployment uses:</p>
+<ul>
+<li><strong>Application server:</strong> Gunicorn with 2-4 Uvicorn
+workers (depending on CPU count)</li>
+<li><strong>Container:</strong> Docker multi-stage build (builder +
+runtime), final image approximately 350 MB</li>
+<li><strong>Database:</strong> Supabase (PostgreSQL with PostGIS)</li>
+<li><strong>Cache:</strong> Upstash (Redis with TLS)</li>
+<li><strong>Frontend:</strong> Next.js standalone output, served via
+Nginx reverse proxy</li>
+<li><strong>Mobile:</strong> Google Play Store and Apple App Store
+distribution</li>
+</ul>
+<p>Database migrations are managed through Alembic
+(<code>alembic upgrade head</code>). Data retention policies:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Data Type</th>
+<th>Retention Period</th>
+<th>Cleanup Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Raw telemetry</td>
+<td>30 days</td>
+<td>Manual via <code>POST /admin/cleanup</code></td>
+</tr>
+<tr class="even">
+<td>Trip history</td>
+<td>365 days</td>
+<td>Manual via <code>POST /admin/cleanup</code></td>
+</tr>
+<tr class="odd">
+<td>Redis live data</td>
+<td>5 minutes</td>
+<td>Automatic TTL expiration</td>
+</tr>
+<tr class="even">
+<td>FCM tokens</td>
+<td>30 days</td>
+<td>Automatic TTL expiration</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Table 4.10:</strong> Data retention policies for different
+data types.</p>
+<h2 id="challenges-and-solutions">4.7 Challenges and Solutions</h2>
+<p><strong>Multi-worker WebSocket Broadcasting.</strong> The initial
+in-memory connection list broke with multiple Gunicorn workers. Each
+worker maintained its own WebSocket connections, so position updates
+from telemetry processed by Worker 1 would not reach clients connected
+to Worker 2. The solution introduced Redis Pub/Sub as a fan-out layer.
+When any worker broadcasts a position update, it publishes to a Redis
+channel that all workers subscribe to. Each worker then forwards the
+message to its local connections. This pattern scales linearly with
+worker count.</p>
+<p><strong>GPS Data Quality.</strong> The ESP32 in a moving bus
+experiences GPS signal loss in urban canyons, tunnels, and dense tree
+cover. Raw GPS data occasionally contains outliers with errors exceeding
+100 meters. The solution implements a three-tier GPS resolution
+strategy: use a fresh fix with valid checksum, fall back to the last
+known good coordinate, and finally use a configurable fallback
+coordinate. The GPS validation step in the telemetry pipeline rejects
+coordinates that deviate more than 500 meters from the last five known
+positions.</p>
+<p><strong>Crowd Detection Accuracy.</strong> Standard pedestrian
+detection models trained on street-level images perform poorly on the
+top-down interior bus camera angle. Passengers appear as
+head-and-shoulder blobs rather than full-body figures, and occlusion
+from seats and luggage is severe. The three-tier detection architecture
+addresses this by combining full-body detection (for standing
+passengers), face detection (for seated passengers with visible faces),
+and head-blob contour analysis (for top-down angles). IoU-based
+deduplication prevents double-counting across tiers.</p>
+<p><strong>ML Model Cold Start.</strong> The RandomForest ETA model
+requires at least 50 trip history samples before it can be trained.
+During the initial deployment period, no training data exists. The
+system handles this gracefully by always providing heuristic ETA
+estimates, with the ML correction applied only when sufficient data has
+been collected and the admin enables the ML toggle. This ensures the
+system is useful from day one, with accuracy improving over time.</p>
+<p><strong>Cross-Origin Frontend Separation.</strong> The admin
+dashboard (port 3000) and bus driver dashboard (port 3001) are separate
+Next.js applications with different authentication requirements. The
+CORS configuration on the backend allows both origins while maintaining
+security through JWT validation. The shared JWT authentication system
+ensures that a driver logged into the bus dashboard can also access
+driver-specific admin endpoints when needed.</p>
+<p><strong>ESP32 Memory Constraints.</strong> The ESP32 has only 520 KB
+of SRAM, which must accommodate the Wi-Fi stack, GPS parsing, camera
+driver, and HTTP client simultaneously. JPEG capture at QVGA resolution
+requires approximately 300 KB for the frame buffer. The solution uses
+external PSRAM (4 MB on most ESP32-CAM modules) for the frame buffer,
+leaving the internal SRAM for program execution. Without PSRAM, the
+firmware falls back to QQVGA resolution (160x120), which fits in
+internal SRAM but provides lower image quality for crowd detection.</p>
+<h2 id="appendix-a-core-code-snippets">Appendix A: Core Code
+Snippets</h2>
+<p>This appendix presents selected code snippets that illustrate key
+implementation decisions discussed in Chapter 4.</p>
+<h3 id="a.1-driver-assignment-endpoint">A.1 Driver Assignment
+Endpoint</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># backend/app/api/v1/driver_assignments.py</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">@router.post</span>(<span class="st">&quot;/driver/assignments/start&quot;</span>, response_model<span class="op">=</span>DriverAssignmentOut)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">async</span> <span class="kw">def</span> start_driver_assignment(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    body: DriverAssignmentStartBody,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    current_user: RequireDriver,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    db: AsyncSession <span class="op">=</span> Depends(get_db),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    session <span class="op">=</span> <span class="cf">await</span> crud_driver_session.get_active_session_for_driver(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        db, current_user.<span class="bu">id</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> session:</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> HTTPException(<span class="dv">404</span>, <span class="st">&quot;No active driver session&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="cf">await</span> crud_route.get_route_by_id(db, body.route_id):</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> HTTPException(<span class="dv">404</span>, <span class="st">&quot;Route not found&quot;</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    existing <span class="op">=</span> <span class="cf">await</span> crud_assignment.get_active_assignment_by_vehicle(</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        db, session.vehicle_id</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> existing:</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> HTTPException(<span class="dv">409</span>, <span class="st">&quot;Vehicle already has an active assignment&quot;</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> <span class="cf">await</span> crud_assignment.create_assignment(</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        db, current_user.<span class="bu">id</span>, session.vehicle_id, body.route_id</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _to_out(a)</span></code></pre></div>
+<p><strong>Listing A.1:</strong> Driver-scoped assignment start endpoint
+using <code>RequireDriver</code> auth.</p>
+<h3 id="a.2-esp32-gps-fallback-logic">A.2 ESP32 GPS Fallback Logic</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode cpp"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> selectGpsFix<span class="op">(</span><span class="dt">float</span> <span class="op">&amp;</span>lat<span class="op">,</span> <span class="dt">float</span> <span class="op">&amp;</span>lon<span class="op">,</span> <span class="dt">float</span> <span class="op">&amp;</span>spd<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>gps<span class="op">.</span>location<span class="op">.</span>isValid<span class="op">()</span> <span class="op">&amp;&amp;</span> gps<span class="op">.</span>location<span class="op">.</span>isUpdated<span class="op">())</span> <span class="op">{</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        lat <span class="op">=</span> gps<span class="op">.</span>location<span class="op">.</span>lat<span class="op">();</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        lon <span class="op">=</span> gps<span class="op">.</span>location<span class="op">.</span>lng<span class="op">();</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        spd <span class="op">=</span> gps<span class="op">.</span>speed<span class="op">.</span>kmph<span class="op">();</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>lastLat <span class="op">!=</span> <span class="fl">0.0</span> <span class="op">&amp;&amp;</span> lastLon <span class="op">!=</span> <span class="fl">0.0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        lat <span class="op">=</span> lastLat<span class="op">;</span> lon <span class="op">=</span> lastLon<span class="op">;</span> spd <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    lat <span class="op">=</span> <span class="fl">9.032</span><span class="op">;</span> lon <span class="op">=</span> <span class="fl">38.752</span><span class="op">;</span> spd <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p><strong>Listing A.2:</strong> Three-tier GPS resolution strategy in
+ESP32 firmware.</p>
+<h3 id="a.3-websocket-redis-pubsub">A.3 WebSocket Redis Pub/Sub</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ConnectionManager:</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> broadcast_position(<span class="va">self</span>, vehicle_id: <span class="bu">int</span>, data: <span class="bu">dict</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        redis <span class="op">=</span> <span class="cf">await</span> get_redis()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> redis.publish(<span class="st">&quot;ws:vehicle_position&quot;</span>, json.dumps(data))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> _subscribe_loop(<span class="va">self</span>):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        redis <span class="op">=</span> <span class="cf">await</span> get_redis()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        pubsub <span class="op">=</span> redis.pubsub()</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">await</span> pubsub.subscribe(<span class="st">&quot;ws:vehicle_position&quot;</span>, <span class="st">&quot;ws:cv_result&quot;</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">async</span> <span class="cf">for</span> message <span class="kw">in</span> pubsub.listen():</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> message[<span class="st">&quot;type&quot;</span>] <span class="op">==</span> <span class="st">&quot;message&quot;</span>:</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                <span class="cf">await</span> <span class="va">self</span>._forward_to_locals(json.loads(message[<span class="st">&quot;data&quot;</span>]))</span></code></pre></div>
+<p><strong>Listing A.3:</strong> WebSocket manager with Redis pub/sub
+for multi-worker broadcast.</p>
+<h3 id="a.4-yolov8-crowd-density-detection">A.4 YOLOv8 Crowd Density
+Detection</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> YoloDetector:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> detect(<span class="va">self</span>, image_path: <span class="bu">str</span>) <span class="op">-&gt;</span> DetectionResult:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        img <span class="op">=</span> cv2.imread(image_path)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        gray <span class="op">=</span> cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        person_boxes <span class="op">=</span> <span class="va">self</span>.person_model(img, conf<span class="op">=</span><span class="fl">0.35</span>)[<span class="dv">0</span>].boxes</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        face_boxes <span class="op">=</span> <span class="va">self</span>.face_model(img, conf<span class="op">=</span><span class="fl">0.30</span>)[<span class="dv">0</span>].boxes</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        head_blobs <span class="op">=</span> <span class="va">self</span>._detect_head_blobs(gray)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        unique_faces <span class="op">=</span> <span class="va">self</span>._deduplicate(person_boxes, face_boxes, <span class="fl">0.3</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        unique_heads <span class="op">=</span> <span class="va">self</span>._deduplicate_all(person_boxes, head_blobs, <span class="fl">0.25</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        total <span class="op">=</span> <span class="bu">len</span>(person_boxes) <span class="op">+</span> <span class="bu">len</span>(unique_faces) <span class="op">+</span> <span class="bu">len</span>(unique_heads)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> DetectionResult(people_count<span class="op">=</span>total, crowd_density<span class="op">=</span><span class="va">self</span>._classify(total))</span></code></pre></div>
+<p><strong>Listing A.4:</strong> Three-tier crowd density detection with
+IoU deduplication.</p>
+<h3 id="a.5-haversine-heuristic-eta">A.5 Haversine Heuristic ETA</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calculate_eta_heuristic(bus_lat, bus_lon, stops, nearest_idx, occupancy<span class="op">=</span><span class="dv">0</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> {}</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    peak_mult <span class="op">=</span> <span class="fl">1.5</span> <span class="cf">if</span> (<span class="dv">7</span> <span class="op">&lt;=</span> hour <span class="op">&lt;=</span> <span class="fl">9.5</span>) <span class="cf">else</span> (<span class="fl">1.8</span> <span class="cf">if</span> (<span class="fl">16.5</span> <span class="op">&lt;=</span> hour <span class="op">&lt;=</span> <span class="fl">19.5</span>) <span class="cf">else</span> <span class="fl">1.0</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    occ_factor <span class="op">=</span> <span class="fl">1.0</span> <span class="cf">if</span> occupancy <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> (<span class="fl">1.2</span> <span class="cf">if</span> occupancy <span class="op">==</span> <span class="dv">1</span> <span class="cf">else</span> <span class="fl">1.4</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(nearest_idx, <span class="bu">len</span>(stops)):</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        distance <span class="op">=</span> haversine(bus_lat, bus_lon, stops[i].lat, stops[i].lon)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        travel_time <span class="op">=</span> distance <span class="op">/</span> <span class="fl">10.0</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        dwell <span class="op">=</span> <span class="bu">sum</span>(s.base_dwell_time <span class="op">*</span> peak_mult <span class="op">*</span> occ_factor <span class="cf">for</span> s <span class="kw">in</span> stops[nearest_idx:i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        results[stops[i].<span class="bu">id</span>] <span class="op">=</span> ETAResult(eta_seconds<span class="op">=</span>travel_time <span class="op">+</span> dwell, distance_m<span class="op">=</span>distance)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> results</span></code></pre></div>
+<p><strong>Listing A.5:</strong> Heuristic ETA calculation with
+peak-hour and occupancy adjustments.</p>
+</body>
+</html>

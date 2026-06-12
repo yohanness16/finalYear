@@ -1,0 +1,43 @@
+flowchart TD
+    subgraph "Authentication & Users"
+        AUTH["auth.py<br/>13 endpoints<br/>Login, Register, OAuth, Driver"]
+        USERS["users.py<br/>Profile management"]
+        ADMIN_USERS["admin_users.py<br/>User CRUD by admin"]
+    end
+
+    subgraph "Fleet Management"
+        VEHICLES["vehicles.py<br/>Vehicle registry & positions"]
+        ROUTES["routes.py<br/>Route & stop management"]
+        ASSIGNMENTS["assignments.py<br/>Admin trip management"]
+        DRIVER_ASSIGN["driver_assignments.py<br/>Driver self-service trips"]
+    end
+
+    subgraph "IoT & Telemetry"
+        GATEWAY["gateway.py<br/>ESP32 multipart upload"]
+        TRACKING["tracking.py<br/>SIM7600 GPS telemetry"]
+        CROWD["crowd.py<br/>CV density results"]
+    end
+
+    subgraph "Real-time & Communication"
+        WS_LIVE["websocket.py<br/>Admin live stream"]
+        WS_MOBILE["websocket_mobile.py<br/>Passenger mobile stream"]
+        NOTIFS["notifications.py<br/>FCM push alerts"]
+        PAIRING["pairing.py<br/>Device pairing codes"]
+    end
+
+    subgraph "Analytics & ML"
+        ADMIN_DASH["admin_dashboard.py<br/>Dashboard charts & KPIs"]
+        SEARCH["search.py<br/>Journey planning"]
+        TRIP_HIST["trip_history.py<br/>Trip history read"]
+    end
+
+    subgraph "Supporting"
+        FAVORITES["favorites.py<br/>User saved routes"]
+        ADMIN["admin.py<br/>ML toggle & settings"]
+    end
+
+    style AUTH fill:#e6f3ff,stroke:#0066cc
+    style GATEWAY fill:#fff3cc,stroke:#cc9900
+    style WS_LIVE fill:#d4edda,stroke:#28a745
+    style WS_MOBILE fill:#d4edda,stroke:#28a745
+    style ADMIN_DASH fill:#f8d7da,stroke:#721c24

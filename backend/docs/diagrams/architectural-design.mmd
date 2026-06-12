@@ -1,0 +1,47 @@
+flowchart TD
+    subgraph T1["Tier 1 — Physical Data Collection"]
+        direction TB
+        GPS[GPS Trackers<br/>on Vehicles]
+        CAM[Camera Sensors<br/>at Stops]
+        IoT[IoT Sensors<br/>Temperature / Occupancy]
+        EDGE[Edge Gateway<br/>Data Aggregation]
+        GPS & CAM & IoT --> EDGE
+    end
+
+    subgraph T2["Tier 2 — Cloud Processing"]
+        direction TB
+        API[API Gateway<br/>FastAPI]
+        AUTH[Auth Service<br/>JWT / OAuth2]
+        PROC[Processing Engine<br/>Route Matching / ETA]
+        SCHED[Scheduler Service<br/>Timetable Generation]
+        GTFS[GTFS Importer<br/>Static Data Loader]
+        WORK[Worker Pool<br/>Background Jobs]
+        DB[(PostgreSQL<br/>Spatial + Relational)]
+        REDIS[(Redis<br/>Cache / Pub-Sub)]
+        API --> AUTH & PROC & SCHED
+        GTFS --> DB
+        PROC --> DB & REDIS
+        SCHED --> DB & REDIS
+        WORK --> DB & REDIS
+    end
+
+    subgraph T3["Tier 3 — User Presentation"]
+        direction TB
+        ADMIN[Admin Dashboard<br/>Next.js]
+        DASH[Bus Tracking App<br/>React Native]
+        WEB[Public Web Portal<br/>Next.js]
+        API_CLIENT[API Consumers<br/>Third-Party Apps]
+    end
+
+    EDGE -- "MQTT / HTTP<br/>Raw Telemetry" --> API
+    API -- "REST / WebSocket<br/>JSON Responses" --> ADMIN & DASH & WEB & API_CLIENT
+
+    classDef tier1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+    classDef tier2 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+    classDef tier3 fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#b71c1c
+    classDef store fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#bf360c
+
+    class GPS,CAM,IoT,EDGE tier1
+    class API,AUTH,PROC,SCHED,GTFS,WORK tier2
+    class DB,REDIS store
+    class ADMIN,DASH,WEB,API_CLIENT tier3

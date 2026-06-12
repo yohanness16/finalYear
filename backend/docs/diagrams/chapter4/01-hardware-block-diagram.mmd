@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph "Bus Power System"
+        BAT["12V/24V Bus Battery"]
+        BUCK["Buck Converter 12V→5V"]
+    end
+
+    subgraph "ESP32-CAM (AI-Thinker)"
+        MCU["ESP32-CAM<br/>Main Controller"]
+        CAM["Camera Module<br/>OV2640"]
+        LED["Status LED<br/>GPIO 4"]
+    end
+
+    subgraph "NEO-6M GPS Module"
+        GPS["NEO-6M GPS<br/>UART 9600 baud"]
+        ANT["External Antenna"]
+    end
+
+    subgraph "Backend Server"
+        API["FastAPI Backend<br/>api.bustrack.dpdns.org"]
+    end
+
+    BAT -->|"12V/24V DC"| BUCK
+    BUCK -->|"5V Power"| MCU
+    BUCK -->|"5V Power"| GPS
+    BUCK -->|"5V Power"| CAM
+
+    CAM -->|"D0-D7 + XCLK<br/>GPIO 0"| MCU
+    GPS -->|"TX → GPIO14 (RX)"| MCU
+    GPS -->|"RX ← GPIO15 (TX)"| MCU
+    MCU -->|"GPIO 4"| LED
+    ANT -->|"RF Signal"| GPS
+
+    MCU -->|"HTTPS Multipart POST<br/>Telemetry + JPEG Image"| API

@@ -31,6 +31,9 @@ from app.api.v1 import (
     websocket_mobile,
 )
 from app.core.config import get_settings
+from app.middleware.firewall import FirewallMiddleware
+from app.middleware.request_validator import RequestValidationMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.redis_cache import close_redis_cache
 from app.services.websocket import manager as ws_manager
 from app.utils.redis_client import close_redis
@@ -60,30 +63,6 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Push notification worker disabled (no FCM_SERVER_KEY)")
 
-    # Start MQTT-Kafka bridge (if enabled)
-    _bridge = None
-    _consumer = None
-    if settings.MQTT_ENABLED and settings.KAFKA_ENABLED:
-        try:
-            from app.services.mqtt_kafka_bridge import get_mqtt_kafka_bridge
-            _bridge = await get_mqtt_kafka_bridge(settings)
-            if _bridge:
-                await _bridge.start()
-                logger.info("MQTT-Kafka bridge started")
-        except Exception:
-            logger.exception("Failed to start MQTT-Kafka bridge")
-
-        try:
-            from app.services.telemetry_consumer import get_telemetry_consumer
-            _consumer = await get_telemetry_consumer(settings)
-            if _consumer:
-                await _consumer.start()
-                logger.info("Kafka telemetry consumer started")
-        except Exception:
-            logger.exception("Failed to start Kafka telemetry consumer")
-    else:
-        logger.info("MQTT/Kafka disabled (set MQTT_ENABLED=true KAFKA_ENABLED=true to enable)")
-
     yield
 
     # Shutdown
@@ -97,19 +76,6 @@ async def lifespan(app: FastAPI):
             logger.warning(
                 "Notification worker did not stop within timeout; forcing cancel"
             )
-
-    if _consumer:
-        try:
-            await _consumer.stop()
-        except Exception:
-            logger.exception("Error stopping Kafka consumer")
-
-    if _bridge:
-        try:
-            await _bridge.stop()
-        except Exception:
-            logger.exception("Error stopping MQTT-Kafka bridge")
-
     await ws_manager.stop()
     await close_redis()
     await close_redis_cache()
@@ -158,27 +124,33 @@ async def health_check():
 # ── Middleware stack (order matters: last added = first executed) ──
 
 # 4. CORS — outermost layer, handles preflight
-# Open CORS: allow ALL origins, all methods, all headers
+cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+# When credentials are enabled, browsers reject wildcard origins.
+# If the configured value is the default wildcard, disable credentials
+# to prevent CORS failures; otherwise use the explicit origin list.
+if cors_origins == ["*"]:
+    _cors_allow_credentials = False
+    _cors_allow_origins = ["*"]
+else:
+    _cors_allow_credentials = True
+    _cors_allow_origins = cors_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=_cors_allow_origins,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=86400,
-    allow_origin_regex=".*",
 )
 
-# 3. Security headers — DISABLED (CSP/form-action blocks cross-origin POST)
-# app.add_middleware(SecurityHeadersMiddleware)
+# 3. Security headers — adds HSTS, CSP, etc. to every response
+app.add_middleware(SecurityHeadersMiddleware)
 
-# 2. Request validation — DISABLED (body parsing conflicts cause 422)
-# app.add_middleware(RequestValidationMiddleware)
+# 2. Request validation — body size, content-type, method checks
+app.add_middleware(RequestValidationMiddleware)
 
-# 1. Firewall — DISABLED (anomaly scoring blocks legitimate requests)
-# if settings.FIREWALL_ENABLED:
-#     app.add_middleware(FirewallMiddleware)
+# 1. Firewall — IP blocklisting, anomaly scoring (innermost, closest to handler)
+if settings.FIREWALL_ENABLED:
+    app.add_middleware(FirewallMiddleware)
 
 # ── API Routers ──
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])

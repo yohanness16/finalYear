@@ -1,0 +1,35 @@
+@startuml
+!theme plain
+
+title 3.5 Three-Tier System Architecture
+
+skinparam backgroundColor #FAFAFA
+skinparam PackageFontStyle bold
+skinparam ArrowColor #555555
+
+package "Tier 1 — Physical Data Collection" #A9DFBF {
+    node "GPS / IoT / Camera Sensors" as sensors
+    component "Edge Gateway" as edge #A9DFBF
+    sensors -down-> edge
+}
+
+package "Tier 2 — Cloud Processing" #AED6F1 {
+    component "API Gateway (FastAPI)" as api #AED6F1
+    component "Processing & Scheduling" as proc #AED6F1
+    database "PostgreSQL + Redis" as db
+    api -down-> proc
+    proc -down-> db
+}
+
+package "Tier 3 — User Presentation" #FAD7A0 {
+    component "Admin Dashboard (Next.js)" as admin #FAD7A0
+    component "Bus Tracking App (React Native)" as app #FAD7A0
+    component "Public Web Portal (Next.js)" as web #FAD7A0
+}
+
+edge -down-> api : MQTT / HTTP
+api -down-> admin : REST / WS
+api -down-> app : REST / WS
+api -down-> web : REST
+
+@enduml

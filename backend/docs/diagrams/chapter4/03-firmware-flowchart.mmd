@@ -1,0 +1,35 @@
+flowchart TD
+    A["Boot & Setup"] --> B["Initialize Camera<br/>OV2640 + PSRAM Check"]
+    B --> C["Initialize GPS UART<br/>GPIO14/15 @ 9600 baud"]
+    C --> D["Connect to Wi-Fi<br/>Auto-reconnect loop"]
+    D --> E["Startup Heartbeat<br/>GET /health"]
+    E --> F["Main Loop Start"]
+
+    F --> G{"GPS NMEA<br/>data available?"}
+    G -->|"Yes"| H["Parse NMEA sentence<br/>TinyGPSPlus library"]
+    G -->|"No"| I{"Heartbeat<br/>timer expired?<br/>(15 sec)"}
+    H --> H1["Validate GPS fix<br/>Fresh + checksum"]
+
+    I -->|"Yes"| J["Send Heartbeat<br/>GET /health"]
+    I -->|"No"| K{"Telemetry<br/>timer expired?<br/>(60 sec)"}
+
+    H1 --> K
+    J --> K
+
+    K -->|"Yes"| L["Capture JPEG Image<br/>Camera FB → Buffer"]
+    K -->|"No"| G
+
+    L --> M["Read GPS Coordinates<br/>Fresh → Last Known → Fallback"]
+    M --> N["Build Multipart Form Data<br/>device_id + lat + lon + image"]
+    N --> O["HTTPS POST<br/>/api/v1/gateway/esp32/telemetry"]
+    O --> P{"HTTP<br/>Success?"}
+    P -->|"Yes"| Q["Increment success counter<br/>LED blink green"]
+    P -->|"No"| R["Increment failure counter<br/>LED blink red"]
+    Q --> G
+    R --> G
+
+    style A fill:#d4edda,stroke:#28a745
+    style F fill:#cce5ff,stroke:#004085
+    style O fill:#fff3cd,stroke:#856404
+    style Q fill:#d4edda,stroke:#28a745
+    style R fill:#f8d7da,stroke:#721c24

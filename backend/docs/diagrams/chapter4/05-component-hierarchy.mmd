@@ -1,0 +1,39 @@
+flowchart TD
+    subgraph "Admin Dashboard - Next.js :3000"
+        LAYOUT["App Shell Layout<br/>Sidebar + Header + Content"]
+        DASH["Dashboard Page<br/>KPI Cards + Charts + Map"]
+        MAP["Map Page<br/>Real-Time Bus Map"]
+        VEH_PAGE["Vehicles Page<br/>Fleet Registry"]
+        SETTINGS["Settings Page<br/>ML Train + ETA Toggle"]
+    end
+
+    subgraph "Shared Components"
+        SHELL["AppShell<br/>Sidebar, TopNav, Breadcrumbs"]
+        REALTIME["RealTimeBusMap<br/>Leaflet + WS positions"]
+        CHARTS["Analytics Charts<br/>Recharts bar/line/pie"]
+        DATATABLE["DataTable<br/>Sortable + Paginated"]
+        CHATBOT["ChatBot<br/>Gemini AI Assistant"]
+    end
+
+    subgraph "Custom Hooks"
+        HOOK_WS["useBusDashboardWebSocket<br/>WS connect + reconnect"]
+        HOOK_AUTH["useAuth<br/>JWT login/logout"]
+        HOOK_LIVE["useLiveVehiclePositions<br/>Position state management"]
+        HOOK_THEME["useTheme<br/>Dark/Light toggle"]
+    end
+
+    LAYOUT --> SHELL
+    DASH --> REALTIME
+    DASH --> CHARTS
+    MAP --> REALTIME
+    VEH_PAGE --> DATATABLE
+    SETTINGS --> CHATBOT
+
+    REALTIME --> HOOK_WS
+    HOOK_WS --> HOOK_AUTH
+    DASH --> HOOK_LIVE
+    SHELL --> HOOK_THEME
+
+    style LAYOUT fill:#e6f3ff,stroke:#0066cc
+    style HOOK_WS fill:#d4edda,stroke:#28a745
+    style HOOK_LIVE fill:#d4edda,stroke:#28a745

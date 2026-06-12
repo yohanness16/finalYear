@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph "ESP32-CAM Pin Connections"
+        P0["GPIO 0  → Camera XCLK"]
+        P4["GPIO 4  → Status LED (with 220Ω resistor)"]
+        P14["GPIO 14 → NEO-6M TX (GPS data out)"]
+        P15["GPIO 15 → NEO-6M RX (GPS commands)"]
+        P33["GPIO 33 → Camera D0"]
+        P32["GPIO 32 → Camera D1"]
+        VCC["3.3V      → Camera VCC & PSRAM"]
+        GND["GND       → Common Ground"]
+    end
+
+    subgraph "NEO-6M GPS Module"
+        GPSTX["TX Pin"]
+        GPSRX["RX Pin"]
+        GPSVCC["VCC ← 5V"]
+        GPSGND["GND ← Common"]
+    end
+
+    subgraph "Power Supply"
+        BUSV["12V Bus Battery"]
+        REG["5V Buck Converter"]
+    end
+
+    P14 ---|"Yellow Wire"| GPSTX
+    P15 ---|"White Wire"| GPSRX
+    P4 ---|"Through 220Ω"| LED["LED → GND"]
+    BUSV -->|"12V DC"| REG
+    REG -->|"5V"| GPSVCC
+    REG -->|"5V"| VCC
+    GPSGND ---|"Black Wire"| GND
+
+    style P14 fill:#e6f3ff,stroke:#0066cc
+    style P15 fill:#e6f3ff,stroke:#0066cc
+    style GPSTX fill:#fff3cc,stroke:#cc9900
+    style GPSRX fill:#fff3cc,stroke:#cc9900

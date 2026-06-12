@@ -1,0 +1,82 @@
+erDiagram
+    USER ||--o{ ASSIGNMENT : drives
+    USER ||--o{ DRIVER_BUS_SESSION : logs_in
+    USER ||--o{ FAVORITE : saves
+    USER ||--o{ RATING : submits
+    USER ||--o{ NOTIFICATION_SETTING : configures
+
+    VEHICLE ||--o{ ASSIGNMENT : assigned_to
+    VEHICLE ||--o{ DRIVER_BUS_SESSION : hosts
+    VEHICLE ||--o{ RAW_TELEMETRY : generates
+    VEHICLE }o--|| ROUTE : follows
+
+    ROUTE ||--o{ ROUTE_STOP : contains
+    ROUTE ||--o{ ASSIGNMENT : scheduled_in
+    ROUTE ||--o{ FAVORITE : saved_as
+    ROUTE ||--o{ NOTIFICATION_SETTING : triggers
+
+    STOP ||--o{ ROUTE_STOP : belongs_to
+    STOP ||--o{ TRIP_HISTORY : arrival_at
+    STOP ||--o{ NOTIFICATION_SETTING : alerts_for
+
+    ASSIGNMENT ||--o{ TRIP_HISTORY : records
+    ASSIGNMENT ||--o{ RATING : receives
+
+    TRIP_HISTORY ||--o{ MODEL_PERFORMANCE : evaluated_by
+
+    USER {
+        int id PK
+        string username
+        string email
+        string password_hash
+        string role
+        boolean is_verified
+    }
+
+    VEHICLE {
+        int id PK
+        string plate_number
+        string device_id
+        string bus_type
+        int capacity
+        boolean is_active
+        int route_id FK
+    }
+
+    ROUTE {
+        int id PK
+        string route_number
+        string direction
+        string name
+        boolean active
+    }
+
+    STOP {
+        int id PK
+        string name
+        float lat
+        float lon
+        int base_dwell_time
+        boolean is_terminal
+    }
+
+    ASSIGNMENT {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        int route_id FK
+        datetime start_time
+        datetime end_time
+        string status
+    }
+
+    TRIP_HISTORY {
+        int id PK
+        int assignment_id FK
+        int stop_id FK
+        datetime arrival_time
+        int dwell_time
+        int occupancy_level
+        int heuristic_eta
+        int ml_eta
+    }

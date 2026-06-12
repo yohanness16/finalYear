@@ -1,0 +1,58 @@
+flowchart TD
+    subgraph "Hardware Layer"
+        ESP["ESP32-CAM + NEO-6M<br/>Captures JPEG + GPS"]
+    end
+
+    subgraph "Ingestion Layer"
+        GW["POST /gateway/esp32/telemetry<br/>Multipart Form Data"]
+        STEP1["Step 1: Vehicle Resolution<br/>Auto-provision if new device_id"]
+        STEP2["Step 2: GPS Validation<br/>Outlier check 500m max delta"]
+    end
+
+    subgraph "Processing Layer"
+        STEP3["Step 3: Image Processing<br/>Save JPEG + YOLOv8 CV Analysis"]
+        STEP4["Step 4: Raw Telemetry<br/>Persist to PostgreSQL JSONB"]
+        STEP5["Step 5: Redis Pipeline<br/>bus:live, veh:cv, veh:pos"]
+        STEP6["Step 6: ETA Computation<br/>Heuristic + ML per stop"]
+    end
+
+    subgraph "Storage Layer"
+        PG["PostgreSQL<br/>14 tables"]
+        REDIS["Redis<br/>Live positions + CV cache"]
+    end
+
+    subgraph "Distribution Layer"
+        STEP7["Step 7: Vehicle Position<br/>Update last_lat/lon"]
+        STEP8["Step 8: Trip History<br/>Stop-level events for ML"]
+        STEP9["Step 9: WebSocket Broadcast<br/>vehicle_position + cv_result"]
+    end
+
+    subgraph "Client Layer"
+        ADMIN["Admin Dashboard<br/>Live Map + Analytics"]
+        MOBILE["Mobile App<br/>Real-time bus tracking"]
+        DRIVER["Bus Driver Dashboard<br/>Ride management"]
+    end
+
+    ESP -->|"HTTPS POST<br/>60s interval"| GW
+    GW --> STEP1
+    STEP1 --> STEP2
+    STEP2 --> STEP3
+    STEP3 --> STEP4
+    STEP3 --> STEP5
+    STEP4 --> PG
+    STEP5 --> REDIS
+    STEP5 --> STEP6
+    STEP6 --> REDIS
+    STEP6 --> STEP7
+    STEP7 --> PG
+    STEP7 --> STEP8
+    STEP8 --> PG
+    STEP8 --> STEP9
+    STEP9 -->|"ws:vehicle_position"| ADMIN
+    STEP9 -->|"ws:vehicle_position<br/>filtered by route"| MOBILE
+    STEP9 -->|"ws:vehicle_position"| DRIVER
+
+    style ESP fill:#e6f3ff,stroke:#0066cc
+    style GW fill:#fff3cd,stroke:#856404
+    style STEP3 fill:#d4edda,stroke:#28a745
+    style STEP9 fill:#f8d7da,stroke:#721c24

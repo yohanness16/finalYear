@@ -1,0 +1,40 @@
+flowchart TD
+    A["JPEG Image<br/>from ESP32-CAM"] --> B["Image Preprocessing<br/>Resize + Grayscale"]
+
+    B --> C["Tier 1: YOLOv8-nano<br/>Full-Body Detection<br/>COCO class 0, conf≥0.35"]
+    B --> D["Tier 2: YOLOv8-nano<br/>Face Detection<br/>conf≥0.30"]
+    B --> E["Tier 3: Head-Blob<br/>Contour Analysis<br/>CLAHE + Adaptive Threshold"]
+
+    C --> C1["Person Bounding Boxes<br/>IoU dedup ≥ 0.3"]
+    D --> D1["Face Bounding Boxes<br/>IoU dedup ≥ 0.3"]
+    E --> E1["Head Contour Blobs<br/>Area 800-25000px<br/>Circularity ≥ 0.45"]
+
+    C1 --> F["IoU Deduplication<br/>Cross-tier overlap removal<br/>person-face: 0.3<br/>person-head: 0.25"]
+    D1 --> F
+    E1 --> F
+
+    F --> G["Final People Count<br/>= T1 + dedup T2 + dedup T3"]
+
+    G --> H{"Bus Capacity<br/>known?"}
+    H -->|"Yes"| I["Load Ratio<br/>people / capacity"]
+    H -->|"No"| J["Count Threshold<br/>≤1 Low, ≤4 Medium, else High"]
+
+    I --> I1{"Ratio < 10%?"}
+    I1 -->|"Yes"| L1["Level 0: Low"]
+    I1 -->|"No"| I2{"Ratio < 50%?"}
+    I2 -->|"Yes"| L2["Level 1: Medium"]
+    I2 -->|"No"| L3["Level 2: High"]
+
+    J --> L1
+    J --> L2
+    J --> L3
+
+    L1 --> K["crowd_density<br/>stored in Redis<br/>veh:cv:{plate}"]
+    L2 --> K
+    L3 --> K
+
+    style A fill:#e6f3ff,stroke:#0066cc
+    style C fill:#d4edda,stroke:#28a745
+    style D fill:#d4edda,stroke:#28a745
+    style E fill:#d4edda,stroke:#28a745
+    style K fill:#fff3cd,stroke:#856404

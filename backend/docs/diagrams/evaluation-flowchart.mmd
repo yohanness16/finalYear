@@ -1,0 +1,29 @@
+flowchart TD
+    START((Start)) --> PICK{Choose Metric}
+
+    PICK -->|GPS| G1[Mount Device in Vehicle]
+    PICK -->|Occupancy| O1[Set Passenger Count 0 to Full Capacity]
+    PICK -->|ETA| E1[Run Python Simulation on Predetermined Path]
+    PICK -->|Latency| L1[Start 30-min Window]
+
+    G1 --> G2[Drive Predefined Route]
+    O1 --> O2[Capture Images]
+    E1 --> E2[Execute Multiple Runs Peak and Off-peak Periods]
+    L1 --> L2[Record Timestamps at 4 Measurement Points]
+
+    G2 --> G3[Collect 30+ Samples at Fixed Waypoints]
+    O2 --> O3[Process through CV Pipeline]
+    E2 --> E3[Collect 50+ Trip Samples]
+    L2 --> L3[Compute End-to-End Duration per Cycle]
+
+    G3 --> G4[Compare Reported vs Reference Coordinates]
+    O3 --> O4[Compare Output vs Ground Truth Count]
+    E3 --> E4[Compare Predicted vs Actual Duration]
+    L3 --> L4[Log Latency per Transmission Cycle]
+
+    G4 --> RESULT[Compute Error Statistics]
+    O4 --> RESULT
+    E4 --> RESULT
+    L4 --> RESULT
+
+    RESULT --> END((End))

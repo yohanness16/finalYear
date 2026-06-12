@@ -1,0 +1,24 @@
+flowchart TD
+    A["Current Bus Position<br/>lat, lon from GPS"] --> B["Find Nearest Stop<br/>on assigned route"]
+    B --> C["Compute Haversine Distance<br/>to each remaining stop"]
+
+    C --> D["Heuristic ETA Calculation<br/>travel_time = distance / 10 m/s<br/>dwell = stops × base_dwell × peak_mult"]
+    D --> E{"Admin Toggle<br/>USE_ML_FOR_PROD?"}
+
+    E -->|"Disabled"| F["Return Heuristic ETA<br/>mode = 'heuristic'"]
+    E -->|"Enabled"| G["Build 12 Feature Vector<br/>route_id, stop_id, sequence<br/>distance, dwell, peak_mult<br/>hour, day_of_week, is_peak<br/>occupancy, heuristic_eta"]
+
+    G --> H{"ML Model<br/>Loaded?"}
+    H -->|"No"| F
+    H -->|"Yes"| I["RandomForest Predict<br/>residual = model.predict(features)"]
+
+    I --> J["ML Adjusted ETA<br/>ml_eta = heuristic_eta + residual"]
+    J --> K["Store in Redis<br/>route:{number}:stop:{id}"]
+    F --> K
+
+    K --> L["Broadcast via WebSocket<br/>vehicle_position.eta_payloads"]
+
+    style A fill:#e6f3ff,stroke:#0066cc
+    style D fill:#fff3cd,stroke:#856404
+    style I fill:#d4edda,stroke:#28a745
+    style K fill:#f8d7da,stroke:#721c24

@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph "Gunicorn Worker 1"
+        WS1["WebSocket Manager<br/>Local connections list"]
+        SUB1["Redis Pub/Sub<br/>Subscriber Task"]
+        ADMIN_WS["Admin WS Clients<br/>Receive all positions"]
+        MOBILE_WS["Mobile WS Clients<br/>Receive filtered by route"]
+    end
+
+    subgraph "Gunicorn Worker 2"
+        WS2["WebSocket Manager<br/>Local connections list"]
+        SUB2["Redis Pub/Sub<br/>Subscriber Task"]
+        ADMIN_WS2["Admin WS Clients"]
+        MOBILE_WS2["Mobile WS Clients"]
+    end
+
+    subgraph "Redis"
+        CH1["Channel: ws:vehicle_position<br/>All position updates"]
+        CH2["Channel: ws:cv_result<br/>All CV results"]
+    end
+
+    subgraph "Broadcast Source"
+        ANY_WS["Any Worker<br/>broadcast_position()"]
+    end
+
+    WS1 -->|"publish()"| CH1
+    WS1 -->|"publish()"| CH2
+    WS2 -->|"publish()"| CH1
+    WS2 -->|"publish()"| CH2
+
+    CH1 -->|"message"| SUB1
+    CH1 -->|"message"| SUB2
+    CH2 -->|"message"| SUB1
+    CH2 -->|"message"| SUB2
+
+    SUB1 -->|"forward to locals"| WS1
+    SUB2 -->|"forward to locals"| WS2
+
+    WS1 --> ADMIN_WS
+    WS1 --> MOBILE_WS
+    WS2 --> ADMIN_WS2
+    WS2 --> MOBILE_WS2
+
+    ANY_WS -->|"publish()"| CH1
+
+    style WS1 fill:#d4edda,stroke:#28a745
+    style WS2 fill:#d4edda,stroke:#28a745
+    style CH1 fill:#fff3cd,stroke:#856404
+    style CH2 fill:#fff3cd,stroke:#856404

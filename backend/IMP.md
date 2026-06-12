@@ -58,8 +58,11 @@
 15. `tests/test_redis_fixes.py` — NEW: 8 Redis tests
 16. `tests/test_image_pipeline.py` — Updated: 2 tests for new GPS behavior
 
-### ⚠️ Pre-existing Issues Not Fixed (Out of Scope)
-- ESP32 gateway integration test (`test_esp32_gateway.py`) — DB-dependent, fails in CI
-- `bus:coords:{plate}` TTL in `redis_client.py` `set_bus_live_pipeline` — already has TTL
-- MQTT/Kafka infrastructure — planned for next iteration
-- Database migration for missing indexes — planned for next iteration
+### ⚠️ Remaining Known Issues
+- CI/CD: Migration step (`alembic upgrade head`) fails in CI — likely a conflict with existing indexes or migration chain issue
+- ESP32 gateway integration test skipped in CI — requires DB
+- YOLO single-thread executor — CV bottleneck
+- No geocaching cache — repeated API calls
+- Three separate simulation scripts with different API paths — inconsistent
+- Simulation never sends images — CV pipeline never exercised
+- Silent exception swallowing in `telemetry_ingest.py`
