@@ -65,33 +65,64 @@ async def create_assignment(
 
 
 async def end_assignment(db: AsyncSession, assignment_id: int) -> Assignment | None:
+    # Load assignment WITH relationships eagerly so we can access
+    # vehicle.plate_number and route.route_number after flush without
+    # triggering a lazy load (which crashes with MissingGreenlet in async).
     result = await db.execute(
         select(Assignment)
         .where(Assignment.id == assignment_id)
-        .options(selectinload(Assignment.vehicle), selectinload(Assignment.route))
+        .options(
+            selectinload(Assignment.vehicle),
+            selectinload(Assignment.route),
+        )
     )
     assignment = result.scalar_one_or_none()
-    if assignment:
-        assignment.status = "completed"
-        assignment.end_time = datetime.now(UTC)
-        await db.flush()
-        await db.refresh(assignment)
+    if assignment is None:
+        return None
 
-        # Clear all live Redis data for this bus so it immediately
-        # disappears from mobile search results.
-        plate = getattr(assignment.vehicle, "plate_number", None) if assignment.vehicle else None
-        route_number = getattr(assignment.route, "route_number", None) if assignment.route else None
-        if plate:
-            try:
-                from app.utils.redis_client import clear_bus_live_data
-                await clear_bus_live_data(plate, route_number)
-            except Exception:
-                import logging
-                logging.exception(
-                    "clear_bus_live_data failed for plate %s on assignment %s",
-                    plate,
-                    assignment_id,
-                )
+    # Snapshot the values we need BEFORE flush/refresh wipe the
+    # eagerly-loaded relationship objects off the ORM state.
+    plate = (
+        getattr(assignment.vehicle, "plate_number", None)
+        if assignment.vehicle else None
+    )
+    route_number = (
+        getattr(assignment.route, "route_number", None)
+        if assignment.route else None
+    )
+
+    assignment.status = "completed"
+    assignment.end_time = datetime.now(UTC)
+    await db.flush()
+
+    # Re-fetch with relationships so the returned object is fully populated.
+    # We do NOT use db.refresh() here because refresh() drops eager-loaded
+    # relationships, which would cause MissingGreenlet on any subsequent access.
+    result2 = await db.execute(
+        select(Assignment)
+        .where(Assignment.id == assignment_id)
+        .options(
+            selectinload(Assignment.vehicle),
+            selectinload(Assignment.route),
+            selectinload(Assignment.driver),
+        )
+    )
+    assignment = result2.scalar_one_or_none()
+
+    # Clear all live Redis data for this bus so it immediately
+    # disappears from mobile search results.
+    if plate:
+        try:
+            from app.utils.redis_client import clear_bus_live_data
+            await clear_bus_live_data(plate, route_number)
+        except Exception:
+            import logging
+            logging.exception(
+                "clear_bus_live_data failed for plate %s on assignment %s",
+                plate,
+                assignment_id,
+            )
+
     return assignment
 
 
