@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
-from app.core.security import RequireAdmin, CurrentUser
+from app.core.security import RequireAdmin
 from app.crud import route as crud_route
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
