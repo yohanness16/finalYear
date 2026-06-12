@@ -3,7 +3,7 @@
 import re
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
@@ -52,7 +52,7 @@ def _vehicle_to_response(v: Vehicle) -> VehicleResponse:
 
 @router.post("/vehicles", response_model=VehicleResponse)
 async def register_vehicle(
-    vehicle: VehicleCreate,
+    vehicle: VehicleCreate = Body(...),
     current_user: User = Depends(RequireAdmin),
     db: AsyncSession = Depends(get_db),
 ):
