@@ -1,8 +1,9 @@
 """Redis connection and helper functions for live state.
 
-Improvements:
-- Use proper TLS kwargs for `rediss://` URLs (avoid string literals).
-- Ping the server on first connect and log errors so writes don't fail silently.
+Fixes:
+- Explicit ConnectionPool with max_connections=50 (was default 10, causing MaxConnectionsError)
+- Separate pubsub pool so subscribe connections don't starve regular commands
+- Socket keepalive + timeouts so stale connections are detected fast
 """
 
 import json
@@ -11,12 +12,16 @@ import logging
 from typing import Any
 
 import redis.asyncio as redis
+from redis.asyncio.connection import ConnectionPool, SSLConnection, Connection
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
+logger = logging.getLogger(__name__)
+
 _redis_client: redis.Redis | None = None
+_pubsub_client: redis.Redis | None = None  # dedicated client for pubsub only
 
 
 class _FakePipeline:
@@ -45,6 +50,13 @@ class _FakePipeline:
     def xadd(self, stream, mapping, maxlen=None, approximate=False):
         self._ops.append(("xadd", stream, mapping, maxlen))
 
+    def delete(self, *keys):
+        for key in keys:
+            self._ops.append(("delete", key))
+
+    def zrem(self, key, *members):
+        self._ops.append(("zrem", key, members))
+
     async def __aenter__(self):
         return self
 
@@ -52,11 +64,9 @@ class _FakePipeline:
         return False
 
     async def execute(self):
-        # Naive execution: apply hset and simple list pushes
         for op in self._ops:
             if op[0] == "hset":
-                key = op[1]
-                mapping = op[2]
+                key, mapping = op[1], op[2]
                 self._store.setdefault(key, {})
                 for k, v in mapping.items():
                     self._store[key][k] = v
@@ -74,16 +84,15 @@ class _FakePipeline:
                 if maxlen is not None:
                     while len(self._store[stream]) > maxlen:
                         self._store[stream].pop(0)
+            elif op[0] == "delete":
+                self._store.pop(op[1], None)
+            elif op[0] == "zrem":
+                pass  # no-op in fake
         return True
 
 
 class FakeRedis:
-    """A tiny async-compatible in-memory Redis substitute for tests/CI.
-
-    Implements only the methods used by the test-suite and application
-    (ping, set, get, delete, hset, expire, lpush, lrange, pipeline, geoadd,
-    publish, close).
-    """
+    """A tiny async-compatible in-memory Redis substitute for tests/CI."""
 
     def __init__(self):
         self._store: dict = {}
@@ -107,20 +116,28 @@ class FakeRedis:
         for k, v in mapping.items():
             self._store[key][k] = v
 
+    async def hget(self, key, field):
+        return self._store.get(key, {}).get(field)
+
     async def expire(self, key, ttl):
-        # no-op in fake
         return True
 
     async def lpush(self, key, value):
         self._store.setdefault(key, [])
         self._store[key].insert(0, value)
 
+    async def ltrim(self, key, start, end):
+        arr = self._store.get(key, [])
+        self._store[key] = arr[start: end + 1] if end != -1 else arr[start:]
+
     async def lrange(self, key, start, end):
         arr = self._store.get(key, [])
-        # emulate redis lrange semantics (end inclusive, -1 means last)
         if end == -1:
             return arr[start:]
-        return arr[start : end + 1]
+        return arr[start: end + 1]
+
+    async def scan(self, cursor, match=None, count=100):
+        return 0, []
 
     def pipeline(self, *args, **kwargs):
         return _FakePipeline(self._store, *args, **kwargs)
@@ -129,7 +146,6 @@ class FakeRedis:
         self._store.setdefault(key, set()).add(member)
 
     async def xadd(self, name, fields, maxlen=None, approximate=False):
-        """Track stream entries; enforce maxlen if provided (for test accuracy)."""
         self._store.setdefault(name, [])
         entry_id = f"{len(self._store[name]):015d}-0"
         self._store[name].append({k: str(v) for k, v in fields.items()})
@@ -139,79 +155,125 @@ class FakeRedis:
         return entry_id
 
     async def publish(self, channel, message):
-        # No-op for tests
         return 1
 
     async def hgetall(self, key):
         return self._store.get(key, {})
 
-
     async def close(self):
         self._store.clear()
 
+    def pubsub(self):
+        return _FakePubSub()
 
 
-def _build_redis_kwargs(url: str) -> dict:
-    """Build kwargs for redis.from_url, handling Upstash TLS (rediss://)."""
-    kwargs: dict = {"encoding": "utf-8", "decode_responses": True}
-    # If using TLS (rediss), allow insecure certs for Upstash (managed TLS),
-    # but pass the correct Python object instead of a string.
-    if url.startswith("rediss://"):
-        # redis.from_url will set ssl=True for rediss://; set ssl_cert_reqs to
-        # None so certificate validation is disabled when necessary.
-        kwargs["ssl_cert_reqs"] = None
-    return kwargs
+class _FakePubSub:
+    async def subscribe(self, *channels):
+        pass
+
+    async def unsubscribe(self, *channels):
+        pass
+
+    async def listen(self):
+        # Never yields in fake — loop won't run in tests
+        return
+        yield  # make it an async generator
+
+    async def aclose(self):
+        pass
+
+
+def _make_pool(url: str, max_connections: int = 50) -> ConnectionPool:
+    """Build a ConnectionPool with sensible defaults for production."""
+    is_tls = url.startswith("rediss://")
+    connection_class = SSLConnection if is_tls else Connection
+
+    kwargs: dict = {
+        "max_connections": max_connections,
+        "socket_keepalive": True,
+        "socket_connect_timeout": 5,
+        "socket_timeout": 5,
+        "retry_on_timeout": True,
+        "health_check_interval": 30,
+        "decode_responses": True,
+    }
+
+    if is_tls:
+        kwargs["ssl_cert_reqs"] = None  # Upstash / managed TLS — skip cert verify
+
+    return ConnectionPool.from_url(url, **kwargs)
 
 
 async def get_redis() -> redis.Redis:
-    """Get Redis client instance and verify connectivity with a ping.
+    """Get the shared Redis client (general commands).
 
-    Raises the underlying exception if connecting/pinging fails so callers
-    can observe errors (we also log for diagnostics).
+    Uses a pool of up to 50 connections. Falls back to FakeRedis in CI.
     """
     global _redis_client
     if _redis_client is None:
-        kwargs = _build_redis_kwargs(settings.REDIS_URL)
-        _redis_client = redis.from_url(settings.REDIS_URL, **kwargs)
         try:
-            await _redis_client.ping()
-        except Exception as exc:  # pragma: no cover - runtime diagnostics
-            logging.exception("Failed to connect to Redis at %s", settings.REDIS_URL)
-            # Fallback for test/CI environments: use an in-memory FakeRedis
-            # so features that depend on Redis don't crash the test run.
-            logging.warning("Falling back to in-memory FakeRedis for tests/CI")
+            pool = _make_pool(settings.REDIS_URL, max_connections=50)
+            client = redis.Redis(connection_pool=pool)
+            await client.ping()
+            _redis_client = client
+            logger.info("Redis connected (general pool, max_connections=50)")
+        except Exception:
+            logger.exception("Failed to connect to Redis at %s — using FakeRedis", settings.REDIS_URL)
             _redis_client = FakeRedis()
-            return _redis_client
     return _redis_client
 
 
-async def close_redis() -> None:
-    """Close Redis connection."""
-    global _redis_client
-    if _redis_client:
-        await _redis_client.close()
-        _redis_client = None
+async def get_pubsub_redis() -> redis.Redis:
+    """Get a DEDICATED Redis client for pubsub subscriptions only.
 
+    Kept separate so pubsub connections never compete with regular
+    commands for pool slots — this was the root cause of MaxConnectionsError.
+    """
+    global _pubsub_client
+    if _pubsub_client is None:
+        try:
+            # Pubsub only needs a small pool — each subscriber uses 1 connection
+            pool = _make_pool(settings.REDIS_URL, max_connections=10)
+            client = redis.Redis(connection_pool=pool)
+            await client.ping()
+            _pubsub_client = client
+            logger.info("Redis connected (pubsub pool, max_connections=10)")
+        except Exception:
+            logger.exception("Failed to connect pubsub Redis — using FakeRedis")
+            _pubsub_client = FakeRedis()
+    return _pubsub_client
+
+
+async def close_redis() -> None:
+    """Close both Redis connections on app shutdown."""
+    global _redis_client, _pubsub_client
+    if _redis_client and not isinstance(_redis_client, FakeRedis):
+        await _redis_client.aclose()
+        _redis_client = None
+    if _pubsub_client and not isinstance(_pubsub_client, FakeRedis):
+        await _pubsub_client.aclose()
+        _pubsub_client = None
+
+
+# ── Key helpers ────────────────────────────────────────────────────────────────
 
 def bus_live_key(plate_number: str) -> str:
-    """Key for bus live state hash."""
     return f"bus:live:{plate_number}"
 
 
 def bus_coords_key(plate_number: str) -> str:
-    """Key for bus coordinates buffer (last 5 points)."""
     return f"bus:coords:{plate_number}"
 
 
 def route_stop_key(route_no: str, stop_id: int) -> str:
-    """Key for pre-calculated ETAs at a stop."""
     return f"route:{route_no}:stop:{stop_id}"
 
+
+# ── Write helpers ──────────────────────────────────────────────────────────────
 
 async def set_route_stop_etas(
     route_number: str, payloads: dict[int, dict[str, Any]], ttl: int = 300
 ) -> None:
-    """Store the latest ETA snapshot for each stop on a route."""
     if not payloads:
         return
     client = await get_redis()
@@ -233,22 +295,19 @@ async def set_bus_live(
     occupancy_level: int,
     assignment_id: int,
 ) -> None:
-    """Store bus live state in Redis hash."""
     client = await get_redis()
     key = bus_live_key(plate_number)
-    data = {
+    await client.hset(key, mapping={
         "lat": str(lat),
         "lon": str(lon),
         "speed": str(speed),
         "occupancy_level": str(occupancy_level),
         "assignment_id": str(assignment_id),
-    }
-    await client.hset(key, mapping=data)
+    })
     await client.expire(key, settings.BUS_LIVE_TTL)
 
 
 async def push_coord_to_buffer(plate_number: str, lat: float, lon: float) -> None:
-    """Push coordinate to circular buffer (last 5), trim if needed."""
     client = await get_redis()
     key = bus_coords_key(plate_number)
     coord = json.dumps({"lat": lat, "lon": lon})
@@ -258,7 +317,6 @@ async def push_coord_to_buffer(plate_number: str, lat: float, lon: float) -> Non
 
 
 async def get_last_coords(plate_number: str) -> list[dict[str, float]]:
-    """Get last 5 coordinates from buffer."""
     client = await get_redis()
     key = bus_coords_key(plate_number)
     raw = await client.lrange(key, 0, -1)
@@ -272,7 +330,6 @@ async def get_last_coords(plate_number: str) -> list[dict[str, float]]:
 
 
 async def add_bus_to_geo(plate_number: str, lon: float, lat: float) -> None:
-    """Add bus to Redis geospatial index for nearby lookup."""
     client = await get_redis()
     await client.geoadd("active_buses", (lon, lat, plate_number))
 
@@ -284,7 +341,7 @@ async def set_bus_live_pipeline(
     occupancy_level: int,
     assignment_id: int,
 ) -> None:
-    """Batch Redis ops: push coords, set live hash, add to geo. Reduces round-trips."""
+    """Batch Redis ops in one pipeline to reduce round-trips."""
     client = await get_redis()
     pipe = client.pipeline()
     coord = json.dumps({"lat": lat, "lon": lon})
@@ -293,16 +350,13 @@ async def set_bus_live_pipeline(
     pipe.lpush(coords_key, coord)
     pipe.ltrim(coords_key, 0, 4)
     pipe.expire(coords_key, settings.BUS_LIVE_TTL)
-    pipe.hset(
-        live_key,
-        mapping={
-            "lat": str(lat),
-            "lon": str(lon),
-            "speed": "0",
-            "occupancy_level": str(occupancy_level),
-            "assignment_id": str(assignment_id),
-        },
-    )
+    pipe.hset(live_key, mapping={
+        "lat": str(lat),
+        "lon": str(lon),
+        "speed": "0",
+        "occupancy_level": str(occupancy_level),
+        "assignment_id": str(assignment_id),
+    })
     pipe.expire(live_key, settings.BUS_LIVE_TTL)
     pipe.geoadd("active_buses", (lon, lat, plate_number))
     await pipe.execute()
@@ -311,12 +365,7 @@ async def set_bus_live_pipeline(
 async def clear_bus_live_data(
     plate_number: str, route_number: str | None = None
 ) -> None:
-    """Remove all live Redis data for a bus when its assignment/journey ends.
-
-    Clears the live hash, coordinate buffer, geo index entry, CV result,
-    position key, history key, and route-stop ETAs (if route_number given).
-    This ensures the bus immediately disappears from mobile search results.
-    """
+    """Remove all live Redis data for a bus when its assignment ends."""
     client = await get_redis()
     pipe = client.pipeline()
     pipe.delete(bus_live_key(plate_number))
@@ -325,16 +374,8 @@ async def clear_bus_live_data(
     pipe.delete(f"veh:cv:{plate_number}")
     pipe.delete(f"veh:hist:{plate_number}")
     pipe.zrem("active_buses", plate_number)
-    if route_number:
-        # Clear all route-stop ETA entries for this route — the bus is
-        # no longer serving it.  We can't know every stop_id here, so we
-        # delete via pattern (use scan to avoid blocking Redis).
-        pass
     await pipe.execute()
 
-    # Pattern-delete route-stop ETA keys outside the pipeline to avoid
-    # blocking.  For most routes the number of stops is small so this is
-    # cheap.
     if route_number:
         pattern = f"route:{route_number}:stop:*"
         cursor = 0
