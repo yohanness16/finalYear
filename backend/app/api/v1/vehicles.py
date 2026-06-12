@@ -3,7 +3,7 @@
 import re
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
@@ -52,24 +52,27 @@ def _vehicle_to_response(v: Vehicle) -> VehicleResponse:
 
 @router.post("/vehicles", response_model=VehicleResponse)
 async def register_vehicle(
-    # FIX: Explicitly using Body(...) ensures FastAPI looks for data in the 
-    # request body even if middleware has touched the request stream.
-    vehicle: VehicleCreate = Body(...),
-    current_user: User = Depends(RequireAdmin),
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(RequireAdmin),
 ):
-    """Register a new vehicle. Requires admin authentication."""
-    if await crud_vehicle.get_vehicle_by_device_id(db, vehicle.device_id):
+    """Register a new vehicle using manual JSON parsing to avoid middleware conflicts."""
+    # Manually parse JSON to bypass stream consumption issues
+    body = await request.json()
+    vehicle_data = VehicleCreate(**body)
+    
+    if await crud_vehicle.get_vehicle_by_device_id(db, vehicle_data.device_id):
         raise HTTPException(400, "Device already registered")
-    if await crud_vehicle.get_plate_number(db, vehicle.plate_number):
+    if await crud_vehicle.get_plate_number(db, vehicle_data.plate_number):
         raise HTTPException(400, "Plate number already registered")
+        
     v = await crud_vehicle.create_vehicle(
         db,
-        vehicle.plate_number,
-        vehicle.device_id,
-        vehicle.bus_type,
-        vehicle.capacity,
-        vehicle.is_active,
+        vehicle_data.plate_number,
+        vehicle_data.device_id,
+        vehicle_data.bus_type,
+        vehicle_data.capacity,
+        vehicle_data.is_active,
     )
     await db.refresh(v, ["route"])
     return _vehicle_to_response(v)
