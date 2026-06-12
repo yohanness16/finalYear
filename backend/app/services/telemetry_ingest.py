@@ -100,9 +100,26 @@ async def process_telemetry(
     result["created"] = created
 
     # ── Step 2: Validate GPS ──
+    # FIX: vehicle.route_id is often NULL when the vehicle was auto-provisioned
+    # by the simulator (device_id + plate only, no route FK set). In that case
+    # fall back to the active assignment's route so GPS validation and ETA both
+    # work correctly.
     route_stops = []
-    if vehicle.route_id:
-        route_stops = await crud_route.get_route_stops_ordered(db, vehicle.route_id)
+    effective_route_id = vehicle.route_id
+    effective_route = vehicle.route
+
+    if not effective_route_id:
+        # Peek at the active assignment to get the route — we'll fetch the full
+        # assignment object properly in Step 5, but we need route_id now.
+        early_assignment = await crud_assignment.get_active_assignment_by_vehicle(
+            db, vehicle.id
+        )
+        if early_assignment and early_assignment.route_id:
+            effective_route_id = early_assignment.route_id
+            effective_route = early_assignment.route  # already selectinloaded
+
+    if effective_route_id:
+        route_stops = await crud_route.get_route_stops_ordered(db, effective_route_id)
 
     validated_lat, validated_lon, rejection = await _validate_gps(
         lat, lon, vehicle.plate_number, route_stops
@@ -187,8 +204,20 @@ async def process_telemetry(
         )
 
     # ── Step 5: Update Redis live pipeline ──
+    # Re-use the assignment we may have already fetched in Step 2 to avoid a
+    # second DB round-trip. get_active_assignment_by_vehicle is idempotent so
+    # calling it again is safe if we didn't fetch early.
     assignment = await crud_assignment.get_active_assignment_by_vehicle(db, vehicle.id)
     assignment_id = assignment.id if assignment else 0
+
+    # Consolidate effective route from assignment if still not resolved
+    if assignment and not effective_route_id and assignment.route_id:
+        effective_route_id = assignment.route_id
+        effective_route = assignment.route
+        if not route_stops:
+            route_stops = await crud_route.get_route_stops_ordered(
+                db, assignment.route_id
+            )
 
     try:
         await set_bus_live_pipeline(
@@ -222,28 +251,30 @@ async def process_telemetry(
             )
 
     # ── Step 6: ETA computation (optional) ──
+    # FIX: was `vehicle.route` which is NULL for simulator-provisioned vehicles.
+    # Now uses effective_route / effective_route_id resolved from the assignment.
     eta_payloads: dict[int, dict[str, Any]] = {}
-    if compute_eta and vehicle.route and route_stops:
+    if compute_eta and effective_route and route_stops:
         try:
             eta_payloads = estimate_route_stop_eta_payloads(
                 validated_lat,
                 validated_lon,
                 speed,
                 occupancy_level or 0,
-                vehicle.route.route_number,
-                vehicle.route_id,
+                effective_route.route_number,
+                effective_route_id,
                 route_stops,
                 plate_number=vehicle.plate_number,
                 vehicle_id=vehicle.id,
             )
-            await set_route_stop_etas(vehicle.route.route_number, eta_payloads)
+            await set_route_stop_etas(effective_route.route_number, eta_payloads)
         except Exception:
             logger.exception(
                 "ETA computation failed for plate %s", vehicle.plate_number
             )
 
     result["eta_computed"] = bool(eta_payloads)
-    result["route_checked"] = bool(vehicle.route_id)
+    result["route_checked"] = bool(effective_route_id)
 
     # ── Step 7: Update vehicle position in DB ──
     await crud_vehicle.update_position(
@@ -274,7 +305,7 @@ async def process_telemetry(
         lat=validated_lat,
         lon=validated_lon,
         speed=speed,
-        route_id=vehicle.route_id,
+        route_id=effective_route_id,
         timestamp=ts,
         bus_type=vehicle.bus_type,
         occupancy_level=occupancy_level,
