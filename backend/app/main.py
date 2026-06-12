@@ -143,10 +143,10 @@ app.add_middleware(
 )
 
 # 3. Security headers — adds HSTS, CSP, etc. to every response
-app.add_middleware(SecurityHeadersMiddleware)
+#app.add_middleware(SecurityHeadersMiddleware)
 
 # 2. Request validation — body size, content-type, method checks
-app.add_middleware(RequestValidationMiddleware)
+#app.add_middleware(RequestValidationMiddleware)
 
 # 1. Firewall — IP blocklisting, anomaly scoring (innermost, closest to handler)
 if settings.FIREWALL_ENABLED:
