@@ -7,8 +7,6 @@ Improved validation:
   - Debug-neutral tolerance for first N points after assignment start
 """
 
-import math
-
 from app.models.stop import Stop
 from app.utils.gps_validation import haversine_meters
 

@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from app.core.security import RequireAdmin
