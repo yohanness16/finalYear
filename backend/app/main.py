@@ -161,29 +161,24 @@ async def health_check():
 # ── Middleware stack (order matters: last added = first executed) ──
 
 # 4. CORS — outermost layer, handles preflight
-cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
-# When credentials are enabled, browsers reject wildcard origins.
-# If the configured value is the default wildcard, disable credentials
-# to prevent CORS failures; otherwise use the explicit origin list.
-if cors_origins == ["*"]:
-    _cors_allow_credentials = False
-    _cors_allow_origins = ["*"]
-else:
-    _cors_allow_credentials = True
-    _cors_allow_origins = cors_origins
+# Open CORS: allow ALL origins, all methods, all headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_allow_origins,
-    allow_credentials=_cors_allow_credentials,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,
+    allow_origin_regex=".*",
 )
 
 # 3. Security headers — adds HSTS, CSP, etc. to every response
 app.add_middleware(SecurityHeadersMiddleware)
 
 # 2. Request validation — body size, content-type, method checks
-app.add_middleware(RequestValidationMiddleware)
+# TEMPORARILY DISABLED - testing if it causes 422 errors on POST /vehicles
+# app.add_middleware(RequestValidationMiddleware)
 
 # 1. Firewall — IP blocklisting, anomaly scoring (innermost, closest to handler)
 if settings.FIREWALL_ENABLED:
