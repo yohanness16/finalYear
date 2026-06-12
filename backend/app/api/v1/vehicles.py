@@ -3,7 +3,7 @@
 import re
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.limiter import limiter
@@ -52,14 +52,16 @@ def _vehicle_to_response(v: Vehicle) -> VehicleResponse:
 
 @router.post("/vehicles", response_model=VehicleResponse)
 async def register_vehicle(
-    vehicle: VehicleCreate,
+    # FIX: Explicitly using Body(...) ensures FastAPI looks for data in the 
+    # request body even if middleware has touched the request stream.
+    vehicle: VehicleCreate = Body(...),
     current_user: User = Depends(RequireAdmin),
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new vehicle. Requires admin authentication."""
     if await crud_vehicle.get_vehicle_by_device_id(db, vehicle.device_id):
         raise HTTPException(400, "Device already registered")
-    if await crud_vehicle.get_vehicle_by_plate(db, vehicle.plate_number):
+    if await crud_vehicle.get_plate_number(db, vehicle.plate_number):
         raise HTTPException(400, "Plate number already registered")
     v = await crud_vehicle.create_vehicle(
         db,
@@ -133,11 +135,7 @@ async def receive_telemetry(
     data: TelemetryInput,
     db: AsyncSession = Depends(get_db),
 ):
-    """Receive GPS telemetry and update vehicle position.
-
-    Auto-provisions the vehicle if device_id is not yet registered.
-    Delegates to the unified process_telemetry() service.
-    """
+    """Receive GPS telemetry and update vehicle position."""
     vehicle = await crud_vehicle.get_vehicle_by_device_id(db, data.device_id)
     if not vehicle:
         vehicle = await crud_vehicle.create_vehicle(
