@@ -1,112 +1,70 @@
 """Request validation middleware — body size limits, content-type enforcement, method checks."""
 
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 from starlette.responses import JSONResponse
-
+from starlette.types import Message
 
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """
-    Validates incoming requests before they reach route handlers.
-
-    Checks:
-      - Content-Type enforcement for POST/PUT/PATCH
-      - Request body size limits (per content type)
-      - Blocked HTTP methods
-      - Required headers for API requests
-      - Null byte injection prevention
-      - Double-encoded path detection
+    Validates incoming requests and ensures the body stream is preserved
+    for downstream FastAPI route handlers.
     """
 
-    # Max body sizes by content type (bytes)
     MAX_BODY_SIZES = {
-        "application/json": 1_048_576,  # 1 MB
-        "application/x-www-form-urlencoded": 524_288,  # 512 KB
-        "multipart/form-data": 10_485_760,  # 10 MB (for image uploads)
-        "text/plain": 262_144,  # 256 KB
+        "application/json": 1_048_576,
+        "application/x-www-form-urlencoded": 524_288,
+        "multipart/form-data": 10_485_760,
+        "text/plain": 262_144,
     }
-
-    # Default max for unknown content types
-    DEFAULT_MAX_BODY = 524_288  # 512 KB
-
-    # Methods that require Content-Type header
-    METHODS_REQUIRE_CONTENT_TYPE: set[str] = {"POST", "PUT", "PATCH"}
-
-    # Allowed content types for API
-    ALLOWED_CONTENT_TYPES: set[str] = {
+    DEFAULT_MAX_BODY = 524_288
+    METHODS_REQUIRE_CONTENT_TYPE = {"POST", "PUT", "PATCH"}
+    ALLOWED_CONTENT_TYPES = {
         "application/json",
         "application/x-www-form-urlencoded",
         "multipart/form-data",
-        "text/plain",
-        "application/octet-stream",
     }
-
-    # Paths exempt from body size limits (e.g., image upload endpoints)
-    BODY_LIMIT_EXEMPT_PATHS: set[str] = {
-        "/api/v1/gateway",
-    }
+    BODY_LIMIT_EXEMPT_PATHS = {"/api/v1/vehicles/telemetry"}
 
     async def dispatch(self, request: Request, call_next):
-        method = request.method
+        # 1. Read and buffer the body stream
+        body_bytes = await request.body()
+        
+        # 2. Re-inject the body into the request
+        # This creates a custom 'receive' function that FastAPI will use
+        # to read the body instead of the already-drained original stream.
+        async def receive() -> Message:
+            return {"type": "http.request", "body": body_bytes, "more_body": False}
+        
+        request._receive = receive
+
+        # 3. Validation Logic (now using the buffered body_bytes)
         path = request.url.path
-        content_type = (
-            request.headers.get("content-type", "").lower().split(";")[0].strip()
-        )
-        content_length = request.headers.get("content-length")
+        method = request.method
+        content_type = request.headers.get("content-type", "")
+        body_length = len(body_bytes)
 
-        # Block non-standard HTTP methods
-        if method not in {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}:
-            return JSONResponse(
-                status_code=405,
-                content={"detail": "Method not allowed"},
-            )
+        if method in self.METHODS_REQUIRE_CONTENT_TYPE:
+            if not content_type:
+                return JSONResponse(status_code=400, content={"detail": "Missing Content-Type"})
 
-        # Content-Type enforcement for write methods
-        if method in self.METHODS_REQUIRE_CONTENT_TYPE and content_length:
-            try:
-                body_length = int(content_length)
-            except (ValueError, TypeError):
-                return JSONResponse(
-                    status_code=400,
-                    content={"detail": "Invalid Content-Length header"},
-                )
-
-            # Check content type is allowed
-            if content_type and content_type not in self.ALLOWED_CONTENT_TYPES:
+            if content_type not in self.ALLOWED_CONTENT_TYPES:
                 return JSONResponse(
                     status_code=415,
-                    content={
-                        "detail": "Unsupported Media Type",
-                        "allowed": list(self.ALLOWED_CONTENT_TYPES),
-                    },
+                    content={"detail": "Unsupported Media Type", "allowed": list(self.ALLOWED_CONTENT_TYPES)},
                 )
 
-            # Check body size limit
             if path not in self.BODY_LIMIT_EXEMPT_PATHS:
-                max_size = self.MAX_BODY_SIZES.get(content_type, self.DEFAULT_MAX_BODY)
+                max_size = self.MAX_BODY_SIZES.get(content_type.split(';')[0], self.DEFAULT_MAX_BODY)
                 if body_length > max_size:
                     return JSONResponse(
                         status_code=413,
-                        content={
-                            "detail": "Request body too large",
-                            "max_bytes": max_size,
-                            "received_bytes": body_length,
-                        },
+                        content={"detail": "Request body too large", "max_bytes": max_size},
                     )
 
-        # Path traversal and null byte detection
-        if "\x00" in path or ".." in path:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Invalid request path"},
-            )
+        # 4. Path traversal and security checks
+        if "\x00" in path or ".." in path or "%25" in path:
+            return JSONResponse(status_code=400, content={"detail": "Invalid request path"})
 
-        # Double-encoded path detection
-        if "%25" in path:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Invalid request path encoding"},
-            )
-
-        response = await call_next(request)
-        return response
+        # 5. Proceed with the request
+        return await call_next(request)
