@@ -11,7 +11,6 @@ from app.core.security import RequireAdmin
 from app.crud import route as crud_route
 from app.crud import vehicle as crud_vehicle
 from app.db.session import get_db
-from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.vehicle import (
     LivePositionsEnvelope,
@@ -53,19 +52,18 @@ def _vehicle_to_response(v: Vehicle) -> VehicleResponse:
 @router.post("/vehicles", response_model=VehicleResponse)
 async def register_vehicle(
     request: Request,
+    current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(RequireAdmin),
 ):
     """Register a new vehicle using manual JSON parsing to avoid middleware conflicts."""
-    # Manually parse JSON to bypass stream consumption issues
     body = await request.json()
     vehicle_data = VehicleCreate(**body)
-    
+
     if await crud_vehicle.get_vehicle_by_device_id(db, vehicle_data.device_id):
         raise HTTPException(400, "Device already registered")
     if await crud_vehicle.get_plate_number(db, vehicle_data.plate_number):
         raise HTTPException(400, "Plate number already registered")
-        
+
     v = await crud_vehicle.create_vehicle(
         db,
         vehicle_data.plate_number,
@@ -113,7 +111,7 @@ async def get_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
 async def admin_update_vehicle(
     vehicle_id: int,
     body: VehicleAdminUpdate,
-    current_user: User = Depends(RequireAdmin),  # ✅ add Depends()
+    current_user: RequireAdmin,
     db: AsyncSession = Depends(get_db),
 ):
     """Set optional fields such as route_id for corridor validation."""
