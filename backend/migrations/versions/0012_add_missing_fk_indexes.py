@@ -1,9 +1,13 @@
 """Add missing foreign key indexes.
 
-Adds indexes on frequently-qualied foreign key columns that were missing,
+Adds indexes on frequently-queried foreign key columns that were missing,
 which causes full table scans on JOIN operations as data grows.
 
 Uses IF NOT EXISTS so the migration is idempotent.
+
+Note: notification_settings does NOT have a stop_id column — it only has
+user_id, route_id, and lead_time_minutes. The stop_id field was added
+later via the notification_setting model but is not in the DB schema.
 """
 
 from alembic import op
@@ -35,16 +39,15 @@ def upgrade() -> None:
     # favorites — queried by user_id
     op.execute("CREATE INDEX IF NOT EXISTS ix_favorites_user_id ON favorites (user_id)")
     op.execute("CREATE INDEX IF NOT EXISTS ix_favorites_route_id ON favorites (route_id)")
-    op.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_favorites_user_route ON favorites (user_id, route_id)")
 
     # ratings — queried by user_id and assignment_id
     op.execute("CREATE INDEX IF NOT EXISTS ix_ratings_user_id ON ratings (user_id)")
     op.execute("CREATE INDEX IF NOT EXISTS ix_ratings_assignment_id ON ratings (assignment_id)")
 
     # notification_settings — queried by user_id for notification worker
+    # Note: only user_id and route_id exist (no stop_id column)
     op.execute("CREATE INDEX IF NOT EXISTS ix_notif_settings_user_id ON notification_settings (user_id)")
     op.execute("CREATE INDEX IF NOT EXISTS ix_notif_settings_route_id ON notification_settings (route_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_notif_settings_stop_id ON notification_settings (stop_id)")
 
 
 def downgrade() -> None:
@@ -61,9 +64,7 @@ def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS ix_model_performance_timestamp")
     op.execute("DROP INDEX IF EXISTS ix_favorites_user_id")
     op.execute("DROP INDEX IF EXISTS ix_favorites_route_id")
-    op.execute("DROP INDEX IF EXISTS uq_favorites_user_route")
     op.execute("DROP INDEX IF EXISTS ix_ratings_user_id")
     op.execute("DROP INDEX IF EXISTS ix_ratings_assignment_id")
     op.execute("DROP INDEX IF EXISTS ix_notif_settings_user_id")
     op.execute("DROP INDEX IF EXISTS ix_notif_settings_route_id")
-    op.execute("DROP INDEX IF EXISTS ix_notif_settings_stop_id")
