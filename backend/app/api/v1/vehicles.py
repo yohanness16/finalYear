@@ -57,6 +57,8 @@ async def register_vehicle(
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new vehicle. Requires admin authentication."""
+    import sys
+    print(f">>> REQUEST REACHED register_vehicle: vehicle={vehicle.model_dump()}", file=sys.stderr, flush=True)
     if await crud_vehicle.get_vehicle_by_device_id(db, vehicle.device_id):
         raise HTTPException(400, "Device already registered")
     if await crud_vehicle.get_vehicle_by_plate(db, vehicle.plate_number):
