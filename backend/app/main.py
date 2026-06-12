@@ -32,7 +32,6 @@ from app.api.v1 import (
 )
 from app.core.config import get_settings
 from app.middleware.firewall import FirewallMiddleware
-from app.middleware.request_validator import RequestValidationMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.redis_cache import close_redis_cache
 from app.services.websocket import manager as ws_manager
