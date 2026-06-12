@@ -19,7 +19,6 @@ from app.services.search_helpers import (
     infer_bus_direction,
     nearest_stop_index,
 )
-from app.utils.gps_validation import haversine_meters
 from app.utils.redis_client import get_redis, route_stop_key
 
 logger = logging.getLogger(__name__)
