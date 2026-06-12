@@ -115,6 +115,7 @@ async def mobile_websocket(
 
                 if msg_type == "subscribe":
                     route_id = data.get("route_id")
+                    stop_id = data.get("stop_id")
                     if route_id is not None:
                         try:
                             route_id = int(route_id)
@@ -125,10 +126,22 @@ async def mobile_websocket(
                             })
                             continue
                         websocket.scope["subscribed_route_id"] = route_id
-                        await websocket.send_json({
-                            "type": "subscribed",
-                            "route_id": route_id,
-                        })
+                        if stop_id is not None:
+                            try:
+                                stop_id = int(stop_id)
+                            except (TypeError, ValueError):
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "detail": "stop_id must be an integer",
+                                })
+                                continue
+                            websocket.scope["subscribed_stop_id"] = stop_id
+                        else:
+                            websocket.scope.pop("subscribed_stop_id", None)
+                        resp = {"type": "subscribed", "route_id": route_id}
+                        if stop_id is not None:
+                            resp["stop_id"] = stop_id
+                        await websocket.send_json(resp)
 
                 elif msg_type == "unsubscribe":
                     websocket.scope["subscribed_route_id"] = None

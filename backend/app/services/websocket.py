@@ -182,6 +182,8 @@ class ConnectionManager:
           - Admin WebSockets (no subscribed_route_id): receive ALL positions
           - Mobile WebSockets (with subscribed_route_id): receive ONLY if
             the position's route_id matches their subscription
+          - Mobile WebSockets (with subscribed_stop_id): include highlighted_stop_eta
+            extracted from eta_payloads for the subscribed stop
         """
         dead: list[WebSocket] = []
 
@@ -196,6 +198,24 @@ class ConnectionManager:
                     pos_route = data.get("route_id")
                     if pos_route is not None and pos_route != sub_route:
                         continue  # skip — not the route this mobile client wants
+
+                    # If mobile client subscribed to a specific stop, annotate
+                    # the message with highlighted_stop_eta for that stop
+                    sub_stop = scope.get("subscribed_stop_id")
+                    if sub_stop is not None:
+                        eta_payloads = data.get("eta_payloads")
+                        if isinstance(eta_payloads, dict):
+                            stop_key = str(sub_stop)
+                            stop_eta = eta_payloads.get(stop_key)
+                            if stop_eta is not None:
+                                # Build a shallow copy with the highlighted ETA
+                                data = {**data, "highlighted_stop_eta": {
+                                    "stop_id": sub_stop,
+                                    "stop_name": stop_eta.get("stop_name", ""),
+                                    "eta_seconds": stop_eta.get("eta_seconds", 0),
+                                    "distance_m": stop_eta.get("distance_m", 0),
+                                    "computed_at": stop_eta.get("computed_at", 0),
+                                }}
 
                 await ws.send_json(data)
             except Exception:

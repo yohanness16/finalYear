@@ -32,9 +32,9 @@ from app.api.v1 import (
     websocket_mobile,
 )
 from app.core.config import get_settings
-from app.middleware.firewall import FirewallMiddleware
-from app.middleware.request_validator import RequestValidationMiddleware
-from app.middleware.security_headers import SecurityHeadersMiddleware
+#from app.middleware.firewall import FirewallMiddleware
+#from app.middleware.request_validator import RequestValidationMiddleware
+#from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.services.redis_cache import close_redis_cache
 from app.services.websocket import manager as ws_manager
 from app.utils.redis_client import close_redis
@@ -144,14 +144,14 @@ app.add_middleware(
 )
 
 # 3. Security headers — adds HSTS, CSP, etc. to every response
-app.add_middleware(SecurityHeadersMiddleware)
+#app.add_middleware(SecurityHeadersMiddleware)
 
 # 2. Request validation — body size, content-type, method checks
-app.add_middleware(RequestValidationMiddleware)
+#app.add_middleware(RequestValidationMiddleware)
 
 # 1. Firewall — IP blocklisting, anomaly scoring (innermost, closest to handler)
-if settings.FIREWALL_ENABLED:
-    app.add_middleware(FirewallMiddleware)
+#if settings.FIREWALL_ENABLED:
+    #app.add_middleware(FirewallMiddleware)
 
 # ── API Routers ──
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
